@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exceed Box 営業ダッシュボード — デモ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#FFD84D; --teal-dark:#8A6A00; --teal-soft:#FFF4CC;
+    --ink:#15171C; --navy:#23262E; --navy-deep:#15171C;
+    --bg:#F4F5F7; --card:#FFFFFF; --line:#E6E8EC; --muted:#6E7480;
+    --orange:#F07B3F; --orange-soft:#FDEEE5;
+    --amber:#E8A23D; --amber-soft:#FBF1DF;
+    --green:#1FA36B; --green-soft:#E4F4EC;
+    --red:#DD5B5B; --red-soft:#FBEAEA;
+    --blue:#3E7CB1; --blue-soft:#E8F0F7;
+    --violet:#7A5FB8; --violet-soft:#EFEAF9;
+    --radius:12px;
+    --shadow:0 1px 2px rgba(19,40,60,.05), 0 4px 14px rgba(19,40,60,.06);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Noto Sans JP',system-ui,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; line-height:1.55;}
+  h1,h2,h3{font-weight:900; letter-spacing:-.01em;}
+  .num{font-family:'Manrope','Noto Sans JP',sans-serif;}
+
+  .app{display:flex; min-height:100vh;}
+
+  /* ---------- サイドバー ---------- */
+  .sidebar{width:226px; background:var(--navy-deep); color:#C6CAD3; flex-shrink:0; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; z-index:30;}
+  .logo{display:flex; align-items:center; gap:10px; padding:20px 18px 14px;}
+  .logo-mark{width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#FFD84D,#F0B429); display:grid; place-items:center; font-family:'Manrope'; font-weight:800; color:#15171C; font-size:15px;}
+  .logo-name{font-family:'Manrope'; font-weight:800; font-size:17px; color:#fff;}
+  .logo-name span{color:#FFD84D;}
+  .logo-sub{font-size:10px; color:#8A8F9A; letter-spacing:.08em;}
+  .nav{padding:6px 10px; flex:1; overflow-y:auto;}
+  .nav-label{font-size:10px; letter-spacing:.12em; color:#7A7F8C; padding:14px 10px 6px;}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; cursor:pointer; font-weight:500; font-size:13.5px; color:#B4B9C4; margin-bottom:2px; border:none; background:none; width:100%; text-align:left; font-family:inherit;}
+  .nav-item:hover{background:rgba(255,255,255,.06); color:#fff;}
+  .nav-item.active{background:var(--teal); color:#15171C; font-weight:700;}
+  .nav-item .ic{width:18px; text-align:center;}
+  .nav-badge{margin-left:auto; background:var(--orange); color:#fff; font-size:10px; font-weight:700; border-radius:99px; padding:1px 7px;}
+  .side-foot{padding:13px 18px; border-top:1px solid rgba(255,255,255,.08); font-size:11px; color:#7A7F8C; line-height:1.5;}
+  .side-foot b{color:#FFD84D; display:block; font-size:11.5px;}
+
+  /* ---------- トップバー ---------- */
+  .main{flex:1; min-width:0;}
+  .topbar{display:flex; align-items:center; gap:14px; padding:12px 26px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:25;}
+  .topbar h1{font-size:16.5px;}
+  .crumb{font-size:12px; color:var(--muted);}
+  .demo-badge{background:var(--amber-soft); color:#9A6A1B; border:1px solid #EAD3A8; font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px;}
+  .live-btn{display:inline-flex; align-items:center; gap:7px; background:linear-gradient(135deg,#7A5FB8,#5A7FD8); color:#fff; font-weight:700; font-size:12.5px; border:none; border-radius:99px; padding:8px 16px; cursor:pointer; font-family:inherit; box-shadow:0 3px 10px rgba(122,95,184,.35); transition:transform .15s;}
+  .live-btn:hover{transform:translateY(-1px);}
+  .live-btn:disabled{opacity:.6; cursor:default; transform:none;}
+  .avatar{width:32px; height:32px; border-radius:50%; background:var(--teal-soft); color:var(--teal-dark); display:grid; place-items:center; font-weight:700; font-size:12px;}
+  .content{padding:24px 26px 70px; max-width:1220px;}
+
+  .view{display:none;}
+  .view.active{display:block; animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  .page-intro{margin-bottom:18px;}
+  .page-intro h2{font-size:19px;}
+  .page-intro p{color:var(--muted); font-size:13px; margin-top:3px; max-width:76ch;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);}
+  .card-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 18px; border-bottom:1px solid var(--line);}
+  .card-head h3{font-size:13.5px;}
+  .hint{font-size:11.5px; color:var(--muted); font-weight:400;}
+  .card-body{padding:16px 18px;}
+
+  .grid{display:grid; gap:16px;}
+  .g-2{grid-template-columns:1fr 1fr;}
+  .g-32{grid-template-columns:3fr 2fr;}
+  @media(max-width:1000px){.g-2,.g-32{grid-template-columns:1fr;} .content{padding:16px;} .sidebar{display:none;}}
+
+  /* ---------- KPI ---------- */
+  .kpis{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:16px;}
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr);}}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:13px 15px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .kpi .k-label{font-size:10.5px; color:var(--muted); font-weight:700; letter-spacing:.04em;}
+  .kpi .k-val{font-family:'Manrope'; font-size:25px; font-weight:800; letter-spacing:-.5px; margin-top:2px;}
+  .kpi .k-delta{font-size:11px; font-weight:700; margin-top:1px;}
+  .up{color:var(--green);} .flat{color:var(--muted);}
+  .kpi.rev{background:linear-gradient(135deg,#1C1F26 0%,#15171C 100%); border:none; color:#fff;}
+  .kpi.rev .k-label{color:#FFD84D;} .kpi.rev .k-delta{color:#C9CDD6;}
+
+  /* ---------- チャート ---------- */
+  .chart-wrap{position:relative;}
+  .chart-legend{display:flex; gap:16px; font-size:11.5px; color:var(--muted); margin-bottom:6px;}
+  .chart-legend b{color:var(--ink);}
+  .leg-dot{display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:baseline;}
+  .donut-wrap{display:flex; align-items:center; gap:22px;}
+  .donut-center{position:absolute; inset:0; display:grid; place-items:center; text-align:center;}
+  .donut-center .dv{font-family:'Manrope'; font-weight:800; font-size:21px;}
+  .donut-center .dl{font-size:10px; color:var(--muted);}
+  .donut-item{display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:8px;}
+  .donut-item .dn{font-family:'Manrope'; font-weight:800; margin-left:auto;}
+
+  /* ---------- ファネル・バー ---------- */
+  .funnel-row{display:flex; align-items:center; gap:12px; padding:6px 0;}
+  .funnel-row .f-label{width:150px; font-size:12.5px; font-weight:700; flex-shrink:0;}
+  .funnel-row .f-track{flex:1; background:#EFF0F3; border-radius:6px; height:24px; overflow:hidden;}
+  .funnel-row .f-bar{height:100%; border-radius:6px; background:linear-gradient(90deg,#FFD84D,#F0B429); min-width:30px; width:0; transition:width 1s cubic-bezier(.2,.7,.3,1);}
+  .funnel-row .f-num{width:78px; text-align:right; font-family:'Manrope'; font-weight:800; font-size:13.5px; flex-shrink:0;}
+  .funnel-row .f-pct{width:58px; text-align:right; font-size:11px; color:var(--muted); flex-shrink:0;}
+  .funnel-note{font-size:12px; color:var(--muted); margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-size:11px; color:var(--muted); font-weight:700; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  td{padding:9px 10px; border-bottom:1px solid #EEEFF2; vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.row-hover{cursor:pointer;}
+  tr.row-hover:hover{background:#FBF9EE;}
+  tr.row-new{animation:rowNew 1.6s ease;}
+  @keyframes rowNew{0%{background:#FBF0C9;}100%{background:transparent;}}
+
+  .badge{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:99px; white-space:nowrap;}
+  .b-teal{background:var(--teal-soft); color:var(--teal-dark);}
+  .b-orange{background:var(--orange-soft); color:#B4501B;}
+  .b-blue{background:var(--blue-soft); color:#2A5E8C;}
+  .b-green{background:var(--green-soft); color:#137A4E;}
+  .b-amber{background:var(--amber-soft); color:#9A6A1B;}
+  .b-grey{background:#EEF2F4; color:#5C6F7C;}
+  .b-violet{background:var(--violet-soft); color:#5B4691;}
+
+  .ai-chip{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 10px; border-radius:99px; background:linear-gradient(135deg,#F2EDFC,#E8EEFB); color:#5B4691; border:1px solid #D9CCF2; cursor:pointer; transition:all .15s; font-family:inherit;}
+  .ai-chip:hover{box-shadow:0 2px 8px rgba(122,95,184,.25); transform:translateY(-1px);}
+
+  .score-pill{display:inline-flex; align-items:center; gap:5px; font-family:'Manrope'; font-weight:800; font-size:13px;}
+  .score-dot{width:8px; height:8px; border-radius:50%;}
+  .s-hot{background:var(--orange); box-shadow:0 0 0 3px var(--orange-soft);}
+  .s-warm{background:var(--amber);}
+  .s-cold{background:#A9BCC7;}
+
+  .bar-line{display:flex; align-items:center; gap:10px; margin-bottom:9px;}
+  .bar-line .bl-label{width:104px; font-size:12.5px; font-weight:700;}
+  .bar-line .bl-track{flex:1; height:10px; background:#EFF0F3; border-radius:99px;}
+  .bar-line .bl-fill{height:100%; border-radius:99px; width:0; transition:width 1s ease;}
+  .bar-line .bl-num{width:44px; text-align:right; font-size:12.5px; font-weight:800; font-family:'Manrope';}
+
+  .hot-item{display:flex; gap:12px; padding:11px 0; border-bottom:1px solid #EEEFF2; align-items:center;}
+  .hot-item:last-child{border-bottom:none;}
+  .hot-item .h-body{flex:1; min-width:0;}
+  .hot-item .h-name{font-weight:700; font-size:13px;}
+  .hot-item .h-sub{font-size:11.5px; color:var(--muted);}
+
+  .btn{display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:13px; border-radius:9px; padding:8px 14px; cursor:pointer; border:1px solid transparent; transition:all .15s; font-family:inherit;}
+  .btn-primary{background:var(--teal); color:#15171C;}
+  .btn-primary:hover{background:#F2C338;}
+  .btn-ghost{background:#fff; border-color:var(--line); color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--teal); color:var(--teal-dark);}
+  .btn-sm{padding:5px 11px; font-size:12px; border-radius:7px;}
+  .btn-orange{background:var(--orange); color:#fff;}
+  .btn-orange:hover{filter:brightness(.94);}
+  .btn-violet{background:linear-gradient(135deg,#7A5FB8,#5A7FD8); color:#fff;}
+
+  /* ---------- インポート ---------- */
+  .import-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;}
+  @media(max-width:1000px){.import-grid{grid-template-columns:repeat(2,1fr);}}
+  .import-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow);}
+  .import-card .ic-em{font-size:20px;}
+  .import-card h4{font-size:13px; font-weight:900; margin:6px 0 2px;}
+  .import-card p{font-size:11.5px; color:var(--muted); margin-bottom:10px; min-height:35px;}
+  .import-card.featured{border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft), var(--shadow);}
+  .filters{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .chip{font-size:12px; font-weight:700; padding:5px 12px; border-radius:99px; border:1px solid var(--line); background:#fff; cursor:pointer; color:#4C6373; font-family:inherit;}
+  .chip.on{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .search{border:1px solid var(--line); border-radius:9px; padding:7px 12px; font-size:13px; font-family:inherit; width:210px; background:#fff;}
+  .search:focus{outline:2px solid var(--teal-soft); border-color:var(--teal);}
+
+  /* ---------- 名刺スキャンモーダル ---------- */
+  .overlay{position:fixed; inset:0; background:rgba(15,34,51,.55); z-index:80; display:none; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(2px);}
+  .overlay.show{display:flex; animation:fade .2s;}
+  .modal{background:#fff; border-radius:16px; box-shadow:0 24px 60px rgba(0,0,0,.3); width:100%; max-width:640px; overflow:hidden;}
+  .modal-head{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--line);}
+  .modal-head h3{font-size:14.5px;}
+  .modal-x{border:none; background:none; font-size:18px; cursor:pointer; color:var(--muted); padding:4px 8px;}
+  .modal-body{padding:20px;}
+
+  .scan-stage{display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;}
+  @media(max-width:640px){.scan-stage{grid-template-columns:1fr;}}
+  .biz-card{position:relative; aspect-ratio:1.72; background:linear-gradient(145deg,#FDFDFB,#F2F1EC); border:1px solid #E4E2DA; border-radius:8px; padding:14px 16px; box-shadow:0 6px 18px rgba(0,0,0,.12); overflow:hidden;}
+  .biz-card .bc-co{font-size:10.5px; font-weight:700; color:#6E6A5E; letter-spacing:.06em;}
+  .biz-card .bc-logo{position:absolute; top:12px; right:14px; width:26px; height:26px; border-radius:6px; background:linear-gradient(135deg,#D8862F,#B5651D); color:#fff; display:grid; place-items:center; font-weight:800; font-size:11px; font-family:'Manrope';}
+  .biz-card .bc-name{font-size:17px; font-weight:900; margin-top:16px; color:#2A2820;}
+  .biz-card .bc-title{font-size:10px; color:#8A8577; margin-top:-2px;}
+  .biz-card .bc-foot{position:absolute; bottom:11px; left:16px; font-size:8.5px; color:#8A8577; line-height:1.6;}
+  .scan-beam{position:absolute; left:0; right:0; height:46px; top:-60px; background:linear-gradient(180deg,rgba(240,180,41,0) 0%,rgba(240,180,41,.30) 50%,rgba(240,180,41,0) 100%); border-top:2px solid rgba(240,180,41,.85); border-bottom:2px solid rgba(240,180,41,.85); opacity:0;}
+  .scanning .scan-beam{opacity:1; animation:beam 1.1s ease-in-out 2;}
+  @keyframes beam{0%{top:-60px;}50%{top:calc(100% + 10px);}100%{top:-60px;}}
+  .ocr-fields .of{margin-bottom:9px;}
+  .ocr-fields label{display:block; font-size:10.5px; font-weight:700; color:var(--muted); margin-bottom:2px;}
+  .ocr-fields .ov{border:1px solid var(--line); border-radius:8px; padding:7px 11px; font-size:13px; min-height:34px; background:#FAFCFC; font-weight:500;}
+  .ocr-fields .ov.filled{border-color:var(--teal); background:var(--teal-soft); animation:pop .3s;}
+  .scan-steps{margin-top:16px; display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .scan-step{font-size:11px; font-weight:700; text-align:center; padding:8px 4px; border-radius:9px; background:#F1F5F5; color:#93A7B2; transition:all .3s;}
+  .scan-step.on{background:var(--teal-soft); color:var(--teal-dark);}
+  .scan-step.ok{background:var(--green-soft); color:#137A4E;}
+  @keyframes pop{from{transform:scale(.92); opacity:.4;} to{transform:none; opacity:1;}}
+
+  /* ---------- リード詳細ドロワー ---------- */
+  .drawer{position:fixed; top:0; right:0; bottom:0; width:420px; max-width:92vw; background:#fff; box-shadow:-16px 0 44px rgba(15,34,51,.22); z-index:70; transform:translateX(105%); transition:transform .3s cubic-bezier(.3,.8,.3,1); display:flex; flex-direction:column;}
+  .drawer.open{transform:none;}
+  .drawer-head{padding:18px 20px 14px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#F8F8FA,#fff);}
+  .drawer-body{flex:1; overflow-y:auto; padding:18px 20px 30px;}
+  .d-sec{margin-bottom:20px;}
+  .d-sec h4{font-size:12px; color:var(--muted); letter-spacing:.05em; margin-bottom:9px;}
+  .tl{position:relative; padding-left:20px;}
+  .tl:before{content:""; position:absolute; left:6px; top:6px; bottom:6px; width:2px; background:#E3ECEB; border-radius:2px;}
+  .tl-item{position:relative; padding-bottom:13px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-item:before{content:""; position:absolute; left:-18px; top:5px; width:10px; height:10px; border-radius:50%; background:#fff; border:2.5px solid var(--teal);}
+  .tl-item.hot:before{border-color:var(--orange); background:var(--orange-soft);}
+  .tl-item .tl-t{font-size:12.5px; font-weight:700;}
+  .tl-item .tl-s{font-size:11px; color:var(--muted);}
+  .tl-item .tl-pt{font-family:'Manrope'; font-weight:800; font-size:11.5px; color:var(--teal-dark); margin-left:6px;}
+  .mini-card{transform:scale(.82); transform-origin:left top; margin-bottom:-26px;}
+  .ai-box{background:linear-gradient(135deg,#F5F1FD,#EEF3FC); border:1px solid #DDD3F2; border-radius:12px; padding:13px 15px;}
+  .ai-box .ai-t{font-size:12px; font-weight:900; color:#5B4691; display:flex; align-items:center; gap:6px;}
+  .ai-box p{font-size:12.5px; margin-top:5px; color:#3B3555;}
+
+  /* ---------- AIメールモーダル ---------- */
+  .ai-mail{background:#FAFBFD; border:1px solid var(--line); border-radius:12px; padding:16px; font-size:13px; min-height:190px; white-space:pre-wrap; line-height:1.75;}
+  .cursor{display:inline-block; width:8px; height:15px; background:var(--violet); vertical-align:-2px; animation:blink .8s infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* ---------- ナーチャリング ---------- */
+  .seq-step{display:flex; gap:14px; padding:13px 0; border-bottom:1px solid #EEEFF2; align-items:center;}
+  .seq-step:last-child{border-bottom:none;}
+  .seq-week{width:58px; flex-shrink:0; text-align:center;}
+  .seq-week .w-num{font-family:'Manrope'; font-weight:800; font-size:14px; color:var(--teal-dark); background:var(--teal-soft); border-radius:9px; padding:6px 0;}
+  .seq-body{flex:1; min-width:0;}
+  .seq-body .s-subject{font-weight:700; font-size:13.5px;}
+  .seq-body .s-meta{font-size:11.5px; color:var(--muted); margin-top:1px;}
+  .seq-stats{display:flex; gap:14px; flex-shrink:0; align-items:center;}
+  .seq-stat{text-align:right; min-width:52px;}
+  .seq-stat .v{font-family:'Manrope'; font-weight:800; font-size:13.5px;}
+  .seq-stat .l{font-size:9.5px; color:var(--muted); letter-spacing:.04em;}
+  .switch{position:relative; width:38px; height:22px; flex-shrink:0; cursor:pointer;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; inset:0; background:#C9CDD6; border-radius:99px; transition:.2s;}
+  .slider:before{content:""; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;}
+  .switch input:checked + .slider{background:var(--teal);}
+  .switch input:checked + .slider:before{transform:translateX(16px);}
+  .note-banner{background:var(--amber-soft); border:1px solid #EAD3A8; color:#7A5514; font-size:12.5px; border-radius:10px; padding:10px 14px; margin-bottom:16px;}
+
+  /* ---------- フィード ---------- */
+  .feed-item{display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #EEEFF2; align-items:center;}
+  .feed-item:last-child{border-bottom:none;}
+  .feed-item.new{animation:rowNew 1.8s ease;}
+  .feed-ic{width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-size:14px; flex-shrink:0;}
+  .feed-body{flex:1; min-width:0;}
+  .feed-body .f-t{font-size:12.5px;}
+  .feed-body .f-time{font-size:10.5px; color:var(--muted);}
+  .feed-score{font-family:'Manrope'; font-weight:800; font-size:12.5px; color:var(--teal-dark); white-space:nowrap;}
+  .alert-card{background:linear-gradient(135deg,#FFF7F1,#FDEEE5); border:1px solid #F3CFB6;}
+
+  /* ---------- 予約ウィザード ---------- */
+  .wizard-steps{display:flex; gap:8px; margin-bottom:18px;}
+  .wstep{flex:1; text-align:center; font-size:12px; font-weight:700; color:var(--muted); padding:8px; border-bottom:3px solid var(--line);}
+  .wstep.on{color:var(--teal-dark); border-color:var(--teal);}
+  .wstep.done{color:var(--green); border-color:var(--green);}
+  .email-frame{max-width:520px; margin:0 auto; border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); background:#fff;}
+  .email-top{background:#F6F7F9; padding:10px 16px; font-size:11.5px; color:var(--muted); border-bottom:1px solid var(--line);}
+  .email-body{padding:22px;}
+  .email-body h4{font-size:15.5px; font-weight:900; margin-bottom:8px;}
+  .email-body p{font-size:13px; color:#41586A; margin-bottom:8px;}
+  .email-cta{display:block; width:100%; text-align:left; background:#fff; border:1.5px solid var(--line); border-radius:10px; padding:12px 14px; font-size:13.5px; font-weight:700; margin-top:10px; cursor:pointer; font-family:inherit; color:var(--ink); transition:all .15s;}
+  .email-cta:hover{border-color:var(--teal); background:var(--teal-soft);}
+  .email-cta .sub{display:block; font-weight:400; font-size:11.5px; color:var(--muted);}
+  .email-cta.big{background:var(--teal); color:#15171C; border-color:var(--teal); text-align:center;}
+  .email-cta.big:hover{background:#F2C338;}
+  .cal-topic{font-size:13px; margin-bottom:14px; color:var(--muted);}
+  .cal-topic b{color:var(--ink);}
+  .cal-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:10px;}
+  .cal-day{text-align:center;}
+  .cal-day .d-name{font-size:11px; font-weight:700; color:var(--muted);}
+  .cal-day .d-num{font-family:'Manrope'; font-weight:800; font-size:15px; margin-bottom:8px;}
+  .slot{display:block; width:100%; margin-bottom:8px; padding:8px 4px; font-size:12.5px; font-weight:700; border-radius:8px; border:1.5px solid var(--line); background:#fff; cursor:pointer; font-family:inherit; color:var(--teal-dark); transition:all .15s;}
+  .slot:hover{border-color:var(--teal); background:var(--teal-soft);}
+  .slot.taken{color:#B9C7CF; border-style:dashed; cursor:not-allowed; text-decoration:line-through;}
+  .slot.picked{background:var(--teal); border-color:var(--teal); color:#15171C;}
+  .confirm-box{max-width:560px; margin:0 auto; text-align:center;}
+  .confirm-tick{width:58px; height:58px; border-radius:50%; background:var(--green-soft); color:var(--green); display:grid; place-items:center; font-size:26px; margin:0 auto 14px; animation:pop .4s;}
+  .assign-card{display:flex; gap:14px; align-items:center; text-align:left; background:#F6F7F9; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin:18px 0;}
+  .assign-avatar{width:44px; height:44px; border-radius:50%; background:var(--navy); color:#fff; display:grid; place-items:center; font-weight:800; font-family:'Manrope'; flex-shrink:0;}
+  .pipeline-flow{display:flex; flex-direction:column; gap:6px; text-align:left; margin-top:16px;}
+  .pf-item{display:flex; gap:10px; align-items:center; font-size:12.5px; color:#41586A;}
+  .pf-item .pf-dot{width:20px; height:20px; border-radius:50%; background:var(--green-soft); color:var(--green); display:grid; place-items:center; font-size:11px; flex-shrink:0;}
+
+  /* ---------- 週カレンダー ---------- */
+  .rule-row{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #EEEFF2; font-size:13px;}
+  .rule-row:last-child{border-bottom:none;}
+  .week-cal{display:grid; grid-template-columns:52px repeat(5,1fr); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:11.5px;}
+  .wc-cell{border-right:1px solid #EEEFF2; border-bottom:1px solid #EEEFF2; min-height:46px; padding:4px 5px; background:#fff;}
+  .wc-head{background:#F6F7F9; font-weight:700; text-align:center; padding:8px 4px; font-size:11px; color:var(--muted);}
+  .wc-time{background:#F6F7F9; color:var(--muted); font-size:10.5px; text-align:right; padding-right:7px; padding-top:6px;}
+  .wc-event{border-radius:6px; padding:4px 6px; font-size:10px; font-weight:700; line-height:1.35;}
+  .ev-teal{background:var(--teal-soft); color:var(--teal-dark); border-left:3px solid var(--teal);}
+  .ev-orange{background:var(--orange-soft); color:#B4501B; border-left:3px solid var(--orange);}
+  .ev-blue{background:var(--blue-soft); color:#2A5E8C; border-left:3px solid var(--blue);}
+  .ev-new{background:var(--green-soft); color:#137A4E; border-left:3px solid var(--green); animation:pop .5s;}
+
+  /* ---------- カンバン ---------- */
+  .kanban{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; align-items:start;}
+  @media(max-width:1100px){.kanban{grid-template-columns:repeat(3,1fr);}}
+  .kb-col{background:#ECEDF0; border-radius:12px; padding:10px; min-height:200px; transition:background .15s;}
+  .kb-col.over{background:#F6EFD3; outline:2px dashed var(--teal);}
+  .kb-col h4{font-size:11.5px; font-weight:900; color:#4C6373; padding:2px 4px 8px; display:flex; justify-content:space-between;}
+  .kb-col h4 .kb-n{font-family:'Manrope'; color:var(--muted); font-weight:700;}
+  .kb-card{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 11px; margin-bottom:8px; cursor:grab; box-shadow:0 1px 3px rgba(19,40,60,.07);}
+  .kb-card:active{cursor:grabbing;}
+  .kb-card.dragging{opacity:.45; transform:rotate(2deg);}
+  .kb-card .kc-name{font-weight:700; font-size:12.5px;}
+  .kb-card .kc-sub{font-size:10.5px; color:var(--muted); margin:2px 0 6px;}
+  .kb-card .kc-foot{display:flex; align-items:center; justify-content:space-between;}
+  .kb-won{background:linear-gradient(135deg,#F2FBF6,#E4F4EC);}
+
+  /* ---------- スマホフレーム ---------- */
+  .phone-wrap{display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap;}
+  .phone{width:330px; flex-shrink:0; background:#0F2233; border-radius:42px; padding:10px; box-shadow:0 20px 50px rgba(15,34,51,.35); position:relative;}
+  .phone-screen{background:#F2F6F6; border-radius:34px; overflow:hidden; height:640px; display:flex; flex-direction:column; position:relative;}
+  .phone-notch{position:absolute; top:10px; left:50%; transform:translateX(-50%); width:110px; height:24px; background:#0F2233; border-radius:99px; z-index:5;}
+  .p-status{display:flex; justify-content:space-between; font-size:10px; font-weight:700; padding:12px 22px 4px; color:var(--ink);}
+  .p-head{padding:10px 18px 12px; background:linear-gradient(135deg,#1C1F26,#15171C); color:#fff;}
+  .p-head .ph-t{font-weight:900; font-size:15px;}
+  .p-head .ph-s{font-size:10.5px; color:#E8C95A;}
+  .p-push{margin:8px 12px 0; background:#fff; border-radius:14px; padding:10px 13px; box-shadow:0 6px 20px rgba(0,0,0,.14); display:none; gap:10px; align-items:center; animation:pushIn .45s cubic-bezier(.2,.9,.3,1.2);}
+  .p-push.show{display:flex;}
+  @keyframes pushIn{from{transform:translateY(-30px); opacity:0;} to{transform:none; opacity:1;}}
+  .p-push .pp-ic{width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,#FFD84D,#F0B429); color:#15171C; display:grid; place-items:center; font-weight:800; font-size:11px; font-family:'Manrope'; flex-shrink:0;}
+  .p-push .pp-t{font-size:11px; font-weight:900;}
+  .p-push .pp-s{font-size:10px; color:var(--muted);}
+  .p-body{flex:1; overflow-y:auto; padding:12px;}
+  .p-card{background:#fff; border-radius:14px; padding:12px 13px; margin-bottom:10px; box-shadow:0 1px 4px rgba(19,40,60,.08); transition:opacity .3s;}
+  .p-card.done{opacity:.45;}
+  .p-card.done .pc-t{text-decoration:line-through;}
+  .p-card .pc-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;}
+  .p-card .pc-time{font-family:'Manrope'; font-weight:800; font-size:13px; color:var(--teal-dark);}
+  .p-card .pc-t{font-weight:700; font-size:12.5px;}
+  .p-card .pc-s{font-size:10.5px; color:var(--muted); margin:2px 0 8px;}
+  .p-btn{width:100%; border:none; border-radius:10px; padding:9px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit; background:var(--teal); color:#15171C;}
+  .p-btn.ghost{background:#EFF0F3; color:var(--teal-dark);}
+  .p-home{width:120px; height:4px; background:#C3CFD6; border-radius:99px; margin:8px auto;}
+
+  /* ---------- ライブデモ ---------- */
+  .live-bar{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(120px); background:#181233; color:#fff; border-radius:16px; padding:13px 20px; z-index:90; display:flex; align-items:center; gap:16px; box-shadow:0 16px 44px rgba(24,18,51,.45); transition:transform .35s cubic-bezier(.2,.8,.3,1); max-width:640px; width:calc(100% - 40px);}
+  .live-bar.show{transform:translateX(-50%) translateY(0);}
+  .live-pulse{width:10px; height:10px; border-radius:50%; background:#8B5CF6; flex-shrink:0; animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(139,92,246,.6);}70%{box-shadow:0 0 0 10px rgba(139,92,246,0);}100%{box-shadow:0 0 0 0 rgba(139,92,246,0);}}
+  .live-text{flex:1; font-size:13px; font-weight:700; min-width:0;}
+  .live-score{font-family:'Manrope'; font-weight:800; font-size:15px; background:rgba(255,255,255,.12); border-radius:10px; padding:5px 12px; white-space:nowrap;}
+  .live-score b{font-size:19px; color:#B79CFF;}
+
+  .footer-note{margin-top:28px; font-size:11.5px; color:#8AA0AD; text-align:center;}
+
+  /* toast */
+  #toast{position:fixed; bottom:24px; right:24px; transform:translateY(90px); background:var(--ink); color:#fff; font-size:12.5px; font-weight:700; padding:11px 18px; border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,.28); transition:transform .25s; z-index:99; max-width:340px;}
+  #toast.show{transform:none;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= サイドバー ================= -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">EX</div>
+      <div>
+        <div class="logo-name">Exceed<span>Box</span></div>
+        <div class="logo-sub">営業ダッシュボード</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">オーバービュー</div>
+      <button class="nav-item active" data-view="dashboard"><span class="ic">▦</span> ダッシュボード</button>
+      <button class="nav-item" data-view="today"><span class="ic">📱</span> 本日のアクション <span class="nav-badge">5</span></button>
+      <div class="nav-label">パイプライン</div>
+      <button class="nav-item" data-view="leads"><span class="ic">◉</span> リード管理・取込</button>
+      <button class="nav-item" data-view="kanban"><span class="ic">▤</span> 商談パイプライン</button>
+      <button class="nav-item" data-view="nurture"><span class="ic">✉</span> ステップメール</button>
+      <button class="nav-item" data-view="tracking"><span class="ic">◔</span> 反応検知・スコア</button>
+      <div class="nav-label">予約</div>
+      <button class="nav-item" data-view="booking"><span class="ic">▣</span> 予約フロー<span style="margin-left:auto;font-size:9.5px;color:#FFD84D;">顧客画面</span></button>
+      <button class="nav-item" data-view="assign"><span class="ic">⇄</span> 自動アサイン</button>
+    </nav>
+    <div class="side-foot">
+      <b>EXCEED REAL ESTATE 様</b>
+      ドバイ・ロンボク不動産事業<br>デモ環境
+    </div>
+  </aside>
+
+  <!-- ================= メイン ================= -->
+  <div class="main">
+    <div class="topbar">
+      <h1 id="topTitle">ダッシュボード</h1>
+      <span class="crumb" id="topCrumb">営業状況サマリー</span>
+      <span style="flex:1;"></span>
+      <button class="live-btn" id="liveBtn" onclick="startLiveDemo()">▶ ライブデモ（自動再生）</button>
+      <span class="demo-badge">デモ・ダミーデータ</span>
+      <div class="avatar">ユ</div>
+    </div>
+
+    <div class="content">
+
+    <!-- ============ ダッシュボード ============ -->
+    <section class="view active" id="view-dashboard">
+      <div class="kpis">
+        <div class="kpi"><div class="k-label">総リード数</div><div class="k-val num" data-count="30000">0</div><div class="k-delta flat">全ソース統合済み</div></div>
+        <div class="kpi"><div class="k-label">初回配信数</div><div class="k-val num" data-count="10000">0</div><div class="k-delta up">第1バッチ / 全3回</div></div>
+        <div class="kpi"><div class="k-label">商談予約</div><div class="k-val num" data-count="30">0</div><div class="k-delta up">▲ 今週 +8</div></div>
+        <div class="kpi"><div class="k-label">商談中</div><div class="k-val num" data-count="18">0</div><div class="k-delta up">▲ 今週 +4</div></div>
+        <div class="kpi"><div class="k-label">成約</div><div class="k-val num" data-count="3">0</div><div class="k-delta up">▲ 今週 +1</div></div>
+        <div class="kpi rev"><div class="k-label">見込み売上</div><div class="k-val num" data-count="128" data-prefix="¥" data-suffix="M">¥0M</div><div class="k-delta">パイプライン加重</div></div>
+      </div>
+
+      <div class="grid g-32" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="card-head"><h3>商談予約・商談数の推移</h3><span class="hint">過去8週間（累計）</span></div>
+          <div class="card-body">
+            <div class="chart-legend">
+              <span><span class="leg-dot" style="background:#F0B429;"></span><b>商談予約</b>（累計30件）</span>
+              <span><span class="leg-dot" style="background:#2F3340;"></span><b>商談化</b>（累計18件）</span>
+            </div>
+            <div class="chart-wrap" id="lineChart"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>エリア別 商談予約</h3><span class="hint">累計30件</span></div>
+          <div class="card-body">
+            <div class="donut-wrap">
+              <div style="position:relative; width:130px; height:130px; flex-shrink:0;" id="donut"></div>
+              <div style="flex:1;">
+                <div class="donut-item"><span class="leg-dot" style="background:#F0B429;"></span>ドバイ<span class="dn num">18件</span></div>
+                <div class="donut-item"><span class="leg-dot" style="background:#2F3340;"></span>ロンボク<span class="dn num">12件</span></div>
+                <div class="funnel-note" style="margin-top:12px;">ロンボクは「視察ストーリー」訴求で予約率が上昇中。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid g-2" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="card-head"><h3>休眠リード再活性ファネル</h3><span class="hint">第1バッチ 10,000件</span></div>
+          <div class="card-body" id="funnel"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>🔥 ホットリード — 本日対応</h3><button class="btn btn-ghost btn-sm" onclick="go('tracking')">スコア詳細 →</button></div>
+          <div class="card-body">
+            <div class="hot-item">
+              <span class="score-pill"><span class="score-dot s-hot"></span><span id="moritaScore">92</span></span>
+              <div class="h-body"><div class="h-name">森田 賢二 様｜青山商事株式会社</div><div class="h-sub">法人移転の問い合わせ・開封×3・予約ページ閲覧</div></div>
+              <button class="ai-chip" onclick="openAiMail('森田 賢二')">✨ AI: 本日中に電話</button>
+            </div>
+            <div class="hot-item">
+              <span class="score-pill"><span class="score-dot s-hot"></span>74</span>
+              <div class="h-body"><div class="h-name">西田 綾香 様｜個人投資家</div><div class="h-sub">ロンボク視察希望・第5週メールに返信</div></div>
+              <button class="ai-chip" onclick="openAiMail('西田 綾香')">✨ AI: 返信案を確認</button>
+            </div>
+            <div class="hot-item">
+              <span class="score-pill"><span class="score-dot s-warm"></span>58</span>
+              <div class="h-body"><div class="h-name">久保 大地 様｜フリーランス</div><div class="h-sub">ドバイ物件の問い合わせ・7/10 相談予約済み</div></div>
+              <span class="badge b-green">予約済</span>
+            </div>
+            <div class="hot-item">
+              <span class="score-pill"><span class="score-dot s-warm"></span>45</span>
+              <div class="h-body"><div class="h-name">長谷川 里奈 様｜株式会社ベレーザ</div><div class="h-sub">生活費チェックリストDL・クリック×2</div></div>
+              <button class="ai-chip" onclick="openAiMail('長谷川 里奈')">✨ AI: 予約リンク送付</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid g-2">
+        <div class="card">
+          <div class="card-head"><h3>担当者別パフォーマンス</h3><span class="hint">今四半期</span></div>
+          <div class="card-body">
+            <table>
+              <thead><tr><th>担当者</th><th>予約</th><th>商談</th><th>成約</th><th>売上</th></tr></thead>
+              <tbody>
+                <tr><td><b>ユパン</b> <span class="badge b-grey">初回相談</span></td><td class="num">8</td><td class="num">5</td><td class="num">1</td><td class="num">¥42M</td></tr>
+                <tr><td><b>チアキ</b> <span class="badge b-grey">移住・生活</span></td><td class="num">7</td><td class="num">4</td><td class="num">1</td><td class="num">¥38M</td></tr>
+                <tr><td><b>ドバイデスク</b> <span class="badge b-grey">現地情報</span></td><td class="num">9</td><td class="num">6</td><td class="num">1</td><td class="num">¥48M</td></tr>
+                <tr><td><b>ロンボクデスク</b> <span class="badge b-grey">視察・案件</span></td><td class="num">6</td><td class="num">3</td><td class="num">0</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>流入元別 商談予約</h3><span class="hint">累計</span></div>
+          <div class="card-body">
+            <div class="bar-line"><div class="bl-label">過去リード</div><div class="bl-track"><div class="bl-fill" data-w="100" style="background:var(--teal);"></div></div><div class="bl-num">30</div></div>
+            <div class="bar-line"><div class="bl-label">SNS流入</div><div class="bl-track"><div class="bl-fill" data-w="40" style="background:var(--blue);"></div></div><div class="bl-num">12</div></div>
+            <div class="bar-line"><div class="bl-label">名刺</div><div class="bl-track"><div class="bl-fill" data-w="27" style="background:var(--orange);"></div></div><div class="bl-num">8</div></div>
+            <div class="bar-line"><div class="bl-label">紹介</div><div class="bl-track"><div class="bl-fill" data-w="17" style="background:var(--amber);"></div></div><div class="bl-num">5</div></div>
+            <div class="funnel-note">すべての予約は「最初の接点」（名刺交換・SNS投稿・配信メール）まで遡って追跡できます。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ リード管理 ============ -->
+    <section class="view" id="view-leads">
+      <div class="page-intro">
+        <h2>リード管理・取込</h2>
+        <p>名刺・過去リスト・SNS問い合わせ・既存CRMをExceed Boxに自動集約。重複を統合し、AIが自動分類します。<b>行をクリックすると詳細が開きます。</b></p>
+      </div>
+
+      <div class="import-grid">
+        <div class="import-card featured"><div class="ic-em">📇</div><h4>名刺スキャン</h4><p>スマホで撮影するだけ。AI-OCRが氏名・会社・連絡先を自動登録。</p><button class="btn btn-primary btn-sm" onclick="openScan()">📷 スキャンを実行</button></div>
+        <div class="import-card"><div class="ic-em">📄</div><h4>CSV / Excel取込</h4><p>過去リードを一括インポート。重複・無効アドレスは取込時に自動クリーニング。</p><button class="btn btn-ghost btn-sm" onclick="toast('取込シミュレーション：2,140件取込・187件の重複を統合しました')">ファイル取込</button></div>
+        <div class="import-card"><div class="ic-em">🔗</div><h4>GoHighLevel連携</h4><p>既存CRMとAPIで双方向同期。最終同期 本日 9:20。</p><button class="btn btn-ghost btn-sm" onclick="toast('同期シミュレーション：GoHighLevelから312件を更新しました')">今すぐ同期</button></div>
+        <div class="import-card"><div class="ic-em">💬</div><h4>SNS / LP / Gmail</h4><p>InstagramのDM・フォーム送信・Gmail問い合わせをリアルタイム取得。</p><button class="btn btn-ghost btn-sm" onclick="toast('本日 SNSから3件の新規問い合わせを取得しました')">受信フィード</button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>リード一覧 <span class="hint" id="leadCount"></span></h3>
+          <input class="search" id="leadSearch" placeholder="氏名・会社名で検索…" oninput="renderLeads()">
+        </div>
+        <div class="card-body" style="padding-top:10px;">
+          <div class="filters" style="margin-bottom:12px;" id="segChips">
+            <button class="chip on" data-seg="all">すべて</button>
+            <button class="chip" data-seg="ドバイ">ドバイ</button>
+            <button class="chip" data-seg="ロンボク">ロンボク</button>
+            <button class="chip" data-seg="投資">投資</button>
+            <button class="chip" data-seg="移住">移住</button>
+            <button class="chip" data-seg="法人">法人</button>
+          </div>
+          <table>
+            <thead><tr><th>リード</th><th>流入元</th><th>分類</th><th>スコア</th><th>ステータス</th><th>次のアクション</th></tr></thead>
+            <tbody id="leadRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ カンバン ============ -->
+    <section class="view" id="view-kanban">
+      <div class="page-intro">
+        <h2>商談パイプライン</h2>
+        <p>リードの進捗をカード形式で管理。<b>カードはドラッグ＆ドロップで移動できます。</b>ステージ変更は既存CRMにも自動反映される想定です。</p>
+      </div>
+      <div class="kanban" id="kanban"></div>
+    </section>
+
+    <!-- ============ ステップメール ============ -->
+    <section class="view" id="view-nurture">
+      <div class="page-intro">
+        <h2>ステップメール（自動ナーチャリング）</h2>
+        <p>休眠リードに「役立つ情報」を自動配信し、興味を育成。反応したリードだけを営業に接続します。</p>
+      </div>
+      <div class="note-banner">編集方針：「ドバイの不動産を買いませんか？」ではなく「ドバイは意外と住みやすい」と思わせる導線。コンテンツが興味を育て、CTAが転換します。</div>
+      <div class="card">
+        <div class="card-head">
+          <h3>シーケンス：ドバイ・ロンボク再活性（全7ステップ）</h3>
+          <span class="badge b-green">配信中・10,000名登録</span>
+        </div>
+        <div class="card-body" id="seqList"></div>
+      </div>
+    </section>
+
+    <!-- ============ 反応検知・スコア ============ -->
+    <section class="view" id="view-tracking">
+      <div class="page-intro">
+        <h2>反応検知・興味スコアリング</h2>
+        <p>開封・クリック・返信をリアルタイムに検知し、AIが興味スコアに変換。しきい値（40点）を超えたリードだけを営業に通知します。</p>
+      </div>
+
+      <div class="grid g-2">
+        <div>
+          <div class="card alert-card" style="margin-bottom:16px;" id="hotAlert">
+            <div class="card-body" style="display:flex; gap:14px; align-items:center;">
+              <div class="feed-ic" style="background:#fff; font-size:18px;">🔥</div>
+              <div style="flex:1;">
+                <div style="font-weight:900;">高スコアリード検知 — スコア <span class="num" id="alertScore">92</span></div>
+                <div style="font-size:12px; color:#7A5514;" id="alertText">森田 賢二 様 / 青山商事株式会社・法人移転・開封×3・予約ページ閲覧・資料DL</div>
+              </div>
+              <button class="btn btn-orange btn-sm" onclick="toast('ユパン（初回相談担当）に通知を送信しました')">営業に通知</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>ライブアクティビティ</h3><span class="hint">自動更新</span></div>
+            <div class="card-body" id="feedList">
+              <div class="feed-item"><div class="feed-ic" style="background:var(--green-soft);">✓</div><div class="feed-body"><div class="f-t"><b>久保 大地 様</b>が相談予約を完了（ドバイ移住）</div><div class="f-time">本日 9:42</div></div><div class="feed-score">+20 → 58</div></div>
+              <div class="feed-item"><div class="feed-ic" style="background:var(--orange-soft);">✉</div><div class="feed-body"><div class="f-t"><b>西田 綾香 様</b>が「ロンボク開発の未来」に返信</div><div class="f-time">本日 9:15</div></div><div class="feed-score">+10 → 74</div></div>
+              <div class="feed-item"><div class="feed-ic" style="background:var(--blue-soft);">↗</div><div class="feed-body"><div class="f-t"><b>森田 賢二 様</b>が相談予約ページを閲覧</div><div class="f-time">本日 8:58</div></div><div class="feed-score">+5 → 92</div></div>
+              <div class="feed-item"><div class="feed-ic" style="background:var(--blue-soft);">↗</div><div class="feed-body"><div class="f-t"><b>長谷川 里奈 様</b>が「生活費チェックリスト」をクリック</div><div class="f-time">本日 8:31</div></div><div class="feed-score">+3 → 45</div></div>
+              <div class="feed-item"><div class="feed-ic" style="background:#EEF2F4;">◎</div><div class="feed-body"><div class="f-t"><b>612名</b>が「ドバイは本当に高い？」を開封（第1週配信）</div><div class="f-time">本日 8:00</div></div><div class="feed-score">各 +1</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="align-self:start;">
+          <div class="card-head"><h3>スコアリングモデル</h3><span class="hint">成約率を見ながら毎月調整</span></div>
+          <div class="card-body">
+            <table>
+              <thead><tr><th>アクション</th><th style="text-align:right;">スコア</th></tr></thead>
+              <tbody>
+                <tr><td>メール開封</td><td style="text-align:right;"><b class="num">+1</b></td></tr>
+                <tr><td>リンククリック</td><td style="text-align:right;"><b class="num">+3</b></td></tr>
+                <tr><td>LP閲覧</td><td style="text-align:right;"><b class="num">+3</b></td></tr>
+                <tr><td>相談ページ閲覧</td><td style="text-align:right;"><b class="num">+5</b></td></tr>
+                <tr><td>返信</td><td style="text-align:right;"><b class="num">+10</b></td></tr>
+                <tr><td>予約完了</td><td style="text-align:right;"><b class="num">+20</b></td></tr>
+                <tr><td>ロンボク視察希望</td><td style="text-align:right;"><b class="num">+30</b></td></tr>
+                <tr><td>法人案件</td><td style="text-align:right;"><b class="num">+30</b></td></tr>
+                <tr><td>高予算</td><td style="text-align:right;"><b class="num">+30</b></td></tr>
+              </tbody>
+            </table>
+            <div class="funnel-note">優先度は営業の勘ではなく<b>行動データ</b>から自動判定。営業通知のしきい値：<b>スコア40以上</b>。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 予約フロー ============ -->
+    <section class="view" id="view-booking">
+      <div class="page-intro">
+        <h2>予約フロー — 見込み客に見える画面</h2>
+        <p>ステップメールから、興味を持った方が相談テーマと日時を選択。Exceed Boxが最適な担当者を自動アサインし、カレンダーを確保します。<b>実際にクリックして体験できます。</b></p>
+      </div>
+
+      <div class="wizard-steps">
+        <div class="wstep on" id="ws1">1・メールのCTA</div>
+        <div class="wstep" id="ws2">2・日時を選択</div>
+        <div class="wstep" id="ws3">3・予約完了・自動アサイン</div>
+      </div>
+
+      <div id="bkStep1">
+        <div class="email-frame">
+          <div class="email-top">差出人: Exceed Boxニュースレター &lt;news@exceed-box.example&gt;　宛先: prospect@example.com</div>
+          <div class="email-body">
+            <h4>ドバイは、意外と住みやすい 🇦🇪</h4>
+            <p>こんにちは。今週は「観光客価格」と「居住者価格」の違いを比較しました。多くの方が驚く差があります。気になるテーマがあれば、お気軽にご相談ください。売り込みはしません。</p>
+            <button class="email-cta" onclick="pickTopic('ドバイ移住の相談')">🏠 ドバイ移住について相談する <span class="sub">生活費・ビザ・エリア・学校</span></button>
+            <button class="email-cta" onclick="pickTopic('不動産投資の相談')">📈 不動産投資について相談する <span class="sub">ドバイ＆ロンボク：利回り・管理・出口</span></button>
+            <button class="email-cta" onclick="pickTopic('ロンボク視察の相談')">🏝 ロンボク視察について聞く <span class="sub">経済特区に隣接する開発ストーリー</span></button>
+            <button class="email-cta big" onclick="pickTopic('まずは30分相談')">無料30分相談を予約する</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="bkStep2" style="display:none;">
+        <div class="card" style="max-width:640px; margin:0 auto;"><div class="card-body">
+          <div class="cal-topic">選択テーマ：<b id="topicLabel"></b>　空いている30分枠をお選びください</div>
+          <div class="cal-grid" id="slotGrid"></div>
+          <div class="funnel-note">表示されるのは、このテーマの担当者のリアルタイム空き枠。裏側の振り分けは、お客様には一切見えません。</div>
+        </div></div>
+      </div>
+
+      <div id="bkStep3" style="display:none;">
+        <div class="confirm-box card"><div class="card-body" style="padding:28px;">
+          <div class="confirm-tick">✓</div>
+          <h3 style="font-size:18px;">ご予約が完了しました</h3>
+          <p style="color:var(--muted); font-size:13px; margin-top:4px;" id="confirmLine"></p>
+          <div class="assign-card">
+            <div class="assign-avatar" id="assignAvatar"></div>
+            <div>
+              <div style="font-weight:700;" id="assignName"></div>
+              <div style="font-size:12px; color:var(--muted);" id="assignRole"></div>
+            </div>
+            <span class="badge b-green" style="margin-left:auto;">自動アサイン</span>
+          </div>
+          <div class="pipeline-flow">
+            <div class="pf-item"><span class="pf-dot">✓</span> 担当者のGoogleカレンダーに予定を自動登録</div>
+            <div class="pf-item"><span class="pf-dot">✓</span> 担当者へ即時プッシュ通知を送信</div>
+            <div class="pf-item"><span class="pf-dot">✓</span> リードスコア +20・ステータスを「商談予約」に更新</div>
+            <div class="pf-item"><span class="pf-dot">✓</span> お客様に確認メール・前日リマインドを自動送信</div>
+          </div>
+          <div style="margin-top:20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="go('assign')">営業カレンダーで確認する →</button>
+            <button class="btn btn-ghost" onclick="resetBooking()">デモをやり直す</button>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ============ 自動アサイン ============ -->
+    <section class="view" id="view-assign">
+      <div class="page-intro">
+        <h2>自動アサイン・営業カレンダー</h2>
+        <p>相談テーマごとに最適な担当者を設定。予約が入ると担当者のカレンダーが自動でブロックされ、即時に通知が届きます。</p>
+      </div>
+
+      <div class="grid g-2">
+        <div class="card" style="align-self:start;">
+          <div class="card-head"><h3>振り分けルール</h3><span class="hint">管理者が編集可能</span></div>
+          <div class="card-body">
+            <div class="rule-row"><span class="badge b-teal">まずは30分相談</span><span style="color:var(--muted);">→</span><b>ユパン</b><span class="hint" style="margin-left:auto;">初回相談</span></div>
+            <div class="rule-row"><span class="badge b-blue">ドバイ移住</span><span style="color:var(--muted);">→</span><b>チアキ</b><span class="hint" style="margin-left:auto;">移住・ライフスタイル</span></div>
+            <div class="rule-row"><span class="badge b-amber">不動産投資</span><span style="color:var(--muted);">→</span><b>ドバイデスク</b><span class="hint" style="margin-left:auto;">現地情報</span></div>
+            <div class="rule-row"><span class="badge b-orange">ロンボク視察</span><span style="color:var(--muted);">→</span><b>ロンボクデスク</b><span class="hint" style="margin-left:auto;">視察・開発案件</span></div>
+            <div class="funnel-note">フォールバック：担当者の空きが5営業日以内にない場合、次に空いているメンバーへ自動オーバーフロー。</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3 id="calOwner">カレンダー — チアキ（今週）</h3><span class="badge b-green" id="newBookingBadge" style="display:none;">新規予約 1件</span></div>
+          <div class="card-body">
+            <div class="week-cal" id="weekCal"></div>
+            <div class="funnel-note">Googleカレンダーと双方向同期。予約は自動で反映され、個人予定は空き枠から除外されます。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 本日のアクション（スマホ） ============ -->
+    <section class="view" id="view-today">
+      <div class="page-intro">
+        <h2>本日のアクション — 営業スマホ画面</h2>
+        <p>現場の営業はスマホだけ。データ入力ではなく「次にやること」だけが通知されます。GoHighLevelの「現場には難しい」という課題への回答です。</p>
+      </div>
+
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <div class="p-status"><span class="num">9:41</span><span>Exceed Box&nbsp;&nbsp;📶 🔋</span></div>
+            <div class="p-head">
+              <div class="ph-t">おはようございます、ユパンさん</div>
+              <div class="ph-s">7月7日（火）・本日のアクション 5件</div>
+            </div>
+            <div class="p-push" id="phonePush">
+              <div class="pp-ic">EX</div>
+              <div><div class="pp-t">🔥 高スコアリード検知</div><div class="pp-s" id="pushText">森田 賢二 様（スコア92）— 本日中の連絡を推奨</div></div>
+            </div>
+            <div class="p-body">
+              <div class="p-card"><div class="pc-top"><span class="pc-time">10:00</span><span class="badge b-teal">ショールーム</span></div><div class="pc-t">田中様｜日本ショールーム来店</div><div class="pc-s">初回対応・ご希望条件のヒアリング（流入元：6月展示会 名刺）</div><button class="p-btn" onclick="pDone(this,'来店対応を記録しました')">来店対応する</button></div>
+              <div class="p-card"><div class="pc-top"><span class="pc-time">13:00</span><span class="badge b-orange">ロンボク</span></div><div class="pc-t">鈴木様｜ロンボク現地視察</div><div class="pc-s">車両手配済み・視察ルート確認（高予算フラグ +30）</div><button class="p-btn" onclick="pDone(this,'視察ルートを確定しました')">視察を案内する</button></div>
+              <div class="p-card"><div class="pc-top"><span class="pc-time">返信あり</span><span class="badge b-blue">Gmail 9:15</span></div><div class="pc-t">山田様｜返信を受信</div><div class="pc-s">価格に関するご質問・回答して次回相談へ</div><button class="p-btn" onclick="pDone(this,'AI返信案を送信しました')">✨ AI返信案で返信</button></div>
+              <div class="p-card"><div class="pc-top"><span class="pc-time">3日未返信</span><span class="badge b-amber">WhatsApp</span></div><div class="pc-t">佐藤様｜未返信フォロー</div><div class="pc-s">7/4 資料送付済み・リマインドを送信</div><button class="p-btn ghost" onclick="pDone(this,'リマインドを送信しました')">フォローする</button></div>
+              <div class="p-card"><div class="pc-top"><span class="pc-time">要フォロー</span><span class="badge b-grey">見積</span></div><div class="pc-t">高橋様｜お見積り確認中</div><div class="pc-s">7/2送付・次回連絡日を設定</div><button class="p-btn ghost" onclick="pDone(this,'次回連絡日：7/10 に設定しました')">連絡日を設定</button></div>
+            </div>
+            <div class="p-home"></div>
+          </div>
+        </div>
+
+        <div style="flex:1; min-width:280px;">
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-body">
+              <h3 style="font-size:14px; margin-bottom:8px;">💡 このスマホ画面のポイント</h3>
+              <div class="pipeline-flow">
+                <div class="pf-item"><span class="pf-dot">✓</span> 表示されるのは「本日の次アクション」だけ。リスト全体は見せない</div>
+                <div class="pf-item"><span class="pf-dot">✓</span> 入力作業は最小限。ボタン1つで完了報告</div>
+                <div class="pf-item"><span class="pf-dot">✓</span> 高スコアリードはプッシュ通知で即時に到達</div>
+                <div class="pf-item"><span class="pf-dot">✓</span> 返信はAIが下書き。営業は確認して送るだけ</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <h3 style="font-size:14px; margin-bottom:6px;">プッシュ通知のデモ</h3>
+              <p style="font-size:12.5px; color:var(--muted); margin-bottom:10px;">高スコアリードが検知された瞬間、担当者のスマホに届く通知を再現します。</p>
+              <button class="btn btn-primary btn-sm" onclick="showPush()">🔔 通知をテスト表示</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-note">Exceed Box 営業ダッシュボード・クリック可能なコンセプトデモ・氏名や数値はすべて説明用のダミーデータです</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========= 名刺スキャンモーダル ========= -->
+<div class="overlay" id="scanOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>📇 名刺スキャン（AI-OCR）</h3><button class="modal-x" onclick="closeScan()">✕</button></div>
+    <div class="modal-body">
+      <div class="scan-stage">
+        <div>
+          <div class="biz-card" id="bizCard">
+            <div class="bc-logo">SR</div>
+            <div class="bc-co">株式会社サンライズ商事</div>
+            <div class="bc-name">中村 翔太</div>
+            <div class="bc-title">事業開発部 部長</div>
+            <div class="bc-foot">s.nakamura@sunrise-t.example<br>03-1234-5678　東京都港区南青山 1-2-3</div>
+            <div class="scan-beam"></div>
+          </div>
+          <div style="font-size:11px; color:var(--muted); margin-top:10px; text-align:center;">スマホで撮影した名刺（サンプル）</div>
+        </div>
+        <div class="ocr-fields">
+          <div class="of"><label>氏名</label><div class="ov" id="ocr1"></div></div>
+          <div class="of"><label>会社名・役職</label><div class="ov" id="ocr2"></div></div>
+          <div class="of"><label>メール</label><div class="ov" id="ocr3"></div></div>
+          <div class="of"><label>電話番号</label><div class="ov" id="ocr4"></div></div>
+        </div>
+      </div>
+      <div class="scan-steps">
+        <div class="scan-step" id="ss1">① OCR読み取り</div>
+        <div class="scan-step" id="ss2">② 重複チェック</div>
+        <div class="scan-step" id="ss3">③ Exceed Box登録</div>
+        <div class="scan-step" id="ss4">④ ステップメール分類</div>
+      </div>
+      <div style="margin-top:16px; text-align:center;">
+        <button class="btn btn-primary" id="scanBtn" onclick="runScan()">▶ スキャン開始</button>
+        <button class="btn btn-ghost" id="scanCloseBtn" style="display:none;" onclick="finishScan()">リード一覧で確認 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========= AI返信案モーダル ========= -->
+<div class="overlay" id="aiOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head"><h3>✨ AI返信案 <span class="badge b-violet" style="margin-left:6px;">自動生成</span></h3><button class="modal-x" onclick="closeAi()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:10px;" id="aiMeta"></div>
+      <div class="ai-mail" id="aiMailBody"></div>
+      <div style="display:flex; gap:10px; margin-top:14px; justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" onclick="toast('編集モード（デモ）')">✏️ 編集する</button>
+        <button class="btn btn-violet btn-sm" id="aiSendBtn" disabled onclick="toast('返信を送信しました（デモ）'); closeAi();">承認して送信</button>
+      </div>
+      <div class="funnel-note" style="margin-top:12px;">この返信案はAIが会話履歴・興味スコア・閲覧コンテンツから自動生成しました。営業は確認して送るだけです。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========= リード詳細ドロワー ========= -->
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:16px; font-weight:900;" id="drName"></div>
+        <div style="font-size:12px; color:var(--muted);" id="drCo"></div>
+      </div>
+      <span class="score-pill" style="font-size:16px;"><span class="score-dot" id="drDot"></span><span id="drScore"></span></span>
+      <button class="modal-x" onclick="closeDrawer()">✕</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-top:10px;" id="drBadges"></div>
+  </div>
+  <div class="drawer-body" id="drBody"></div>
+</div>
+
+<div class="live-bar" id="liveBar">
+  <span class="live-pulse"></span>
+  <div class="live-text" id="liveText">ライブデモを開始します…</div>
+  <div class="live-score">スコア <b id="liveScore">31</b></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= ナビゲーション ================= */
+const titles={
+  dashboard:['ダッシュボード','営業状況サマリー'],
+  today:['本日のアクション','ユパン・5件'],
+  leads:['リード管理・取込','統合リード 30,000件'],
+  kanban:['商談パイプライン','ドラッグで移動できます'],
+  nurture:['ステップメール','自動ナーチャリング'],
+  tracking:['反応検知・スコア','開封・クリック・返信・スコア'],
+  booking:['予約フロー','見込み客に見える画面'],
+  assign:['自動アサイン','振り分けと営業カレンダー'],
+};
+let dashAnimated=false;
+function go(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+  document.getElementById('topTitle').textContent=titles[v][0];
+  document.getElementById('topCrumb').textContent=titles[v][1];
+  window.scrollTo({top:0});
+  if(v==='dashboard') animateDashboard();
+}
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
+
+/* ================= 汎用 ================= */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),2800);
+}
+function countUp(el){
+  const target=+el.dataset.count, pre=el.dataset.prefix||'', suf=el.dataset.suffix||'';
+  const dur=1100, t0=performance.now();
+  function tick(t){
+    const p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3);
+    el.textContent=pre+Math.round(target*e).toLocaleString()+suf;
+    if(p<1)requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+function typeText(el,text,speed,done){
+  el.innerHTML='<span class="cursor"></span>';
+  let i=0;
+  const iv=setInterval(()=>{
+    i++;
+    el.innerHTML=text.slice(0,i).replace(/\n/g,'<br>')+'<span class="cursor"></span>';
+    if(i>=text.length){clearInterval(iv); el.innerHTML=text.replace(/\n/g,'<br>'); if(done)done();}
+  },speed);
+  return iv;
+}
+
+/* ================= ダッシュボード アニメーション ================= */
+function animateDashboard(){
+  document.querySelectorAll('#view-dashboard .k-val[data-count]').forEach(countUp);
+  document.querySelectorAll('#view-dashboard .bl-fill').forEach(f=>{f.style.width='0'; requestAnimationFrame(()=>setTimeout(()=>f.style.width=f.dataset.w+'%',60));});
+  buildFunnel(); buildLineChart(); buildDonut();
+}
+/* ファネル */
+const funnelData=[['配信数',10000],['開封',2400],['クリック',420],['返信',80],['商談予約',30],['商談化',18],['成約',3]];
+function buildFunnel(){
+  const max=Math.log10(funnelData[0][1]);
+  let html='';
+  funnelData.forEach((d,i)=>{
+    const w=Math.max(6,(Math.log10(d[1])/max)*100);
+    const pct=i===0?'100%':((d[1]/funnelData[0][1])*100).toFixed(d[1]<100?2:1)+'%';
+    html+=`<div class="funnel-row"><div class="f-label">${d[0]}</div><div class="f-track"><div class="f-bar" data-w="${w}"></div></div><div class="f-num num">${d[1].toLocaleString()}</div><div class="f-pct">${pct}</div></div>`;
+  });
+  html+='<div class="funnel-note">バー幅は視認性のため対数スケール。配信はバウンス・配信停止を監視しながら段階的に拡大します。</div>';
+  const el=document.getElementById('funnel');
+  el.innerHTML=html;
+  requestAnimationFrame(()=>setTimeout(()=>el.querySelectorAll('.f-bar').forEach(b=>b.style.width=b.dataset.w+'%'),60));
+}
+/* 折れ線チャート */
+function buildLineChart(){
+  const W=560,H=200,padL=34,padB=24,padT=12,padR=10;
+  const bookings=[0,2,5,9,14,19,24,30], opps=[0,1,2,4,7,10,14,18], maxY=30;
+  const x=i=>padL+(W-padL-padR)*(i/(bookings.length-1));
+  const y=v=>padT+(H-padT-padB)*(1-v/maxY);
+  const pts=a=>a.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+  let grid='';
+  [0,10,20,30].forEach(v=>{grid+=`<line x1="${padL}" y1="${y(v)}" x2="${W-padR}" y2="${y(v)}" stroke="#E9EAEE" stroke-width="1"/><text x="${padL-7}" y="${y(v)+4}" font-size="10" fill="#93A7B2" text-anchor="end" font-family="Manrope">${v}</text>`;});
+  let labels='';
+  bookings.forEach((_,i)=>{labels+=`<text x="${x(i)}" y="${H-6}" font-size="10" fill="#93A7B2" text-anchor="middle" font-family="Manrope">W${i+1}</text>`;});
+  const dots=(a,c)=>a.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="3.2" fill="#fff" stroke="${c}" stroke-width="2.2"/>`).join('');
+  document.getElementById('lineChart').innerHTML=
+   `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto;">
+      ${grid}${labels}
+      <polygon points="${pts(bookings)} ${x(7)},${y(0)} ${x(0)},${y(0)}" fill="rgba(240,180,41,.12)"/>
+      <polyline points="${pts(bookings)}" fill="none" stroke="#F0B429" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="anim-line"/>
+      <polyline points="${pts(opps)}" fill="none" stroke="#2F3340" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 0" class="anim-line2"/>
+      ${dots(bookings,'#F0B429')}${dots(opps,'#2F3340')}
+    </svg>`;
+  document.querySelectorAll('.anim-line,.anim-line2').forEach(p=>{
+    const len=p.getTotalLength();
+    p.style.strokeDasharray=len; p.style.strokeDashoffset=len;
+    p.getBoundingClientRect();
+    p.style.transition='stroke-dashoffset 1.3s ease';
+    p.style.strokeDashoffset='0';
+  });
+}
+/* ドーナツ */
+function buildDonut(){
+  const r=52,c=2*Math.PI*r,d=18/30;
+  document.getElementById('donut').innerHTML=
+   `<svg viewBox="0 0 130 130" style="width:130px;height:130px;transform:rotate(-90deg);">
+      <circle cx="65" cy="65" r="${r}" fill="none" stroke="#E9EBEF" stroke-width="18"/>
+      <circle cx="65" cy="65" r="${r}" fill="none" stroke="#2F3340" stroke-width="18" stroke-dasharray="${c}" stroke-dashoffset="0"/>
+      <circle id="donutSeg" cx="65" cy="65" r="${r}" fill="none" stroke="#F0B429" stroke-width="18" stroke-linecap="butt" stroke-dasharray="0 ${c}" style="transition:stroke-dasharray 1.2s ease;"/>
+    </svg>
+    <div class="donut-center"><div><div class="dv num">30件</div><div class="dl">商談予約</div></div></div>`;
+  requestAnimationFrame(()=>setTimeout(()=>{document.getElementById('donutSeg').setAttribute('stroke-dasharray',`${c*d} ${c}`);},80));
+}
+
+/* ================= リード ================= */
+/* [氏名,会社,流入元,分類,スコア,温度,ステータス,次アクション] */
+let leads=[
+  ['森田 賢二','青山商事株式会社','名刺','法人',92,'hot','🔥 要対応・営業通知済み','本日中に電話（ユパン）'],
+  ['西田 綾香','個人投資家','過去リード','ロンボク',74,'hot','返信あり','視察資料を送付'],
+  ['久保 大地','フリーランス','SNS','ドバイ',58,'warm','7/10 予約済み','相談準備'],
+  ['長谷川 里奈','株式会社ベレーザ','LPフォーム','移住',45,'warm','反応あり','予約リンク送付'],
+  ['石川 颯太','石川ホールディングス','GoHighLevel','投資',38,'warm','育成中・第4週','自動（ステップメール）'],
+  ['田村 由紀','—','SNS','ロンボク',34,'warm','クリック×2','自動（ステップメール）'],
+  ['藤井 直子','フジイデザイン','Gmail','移住',27,'cold','開封×2','自動（ステップメール）'],
+  ['安藤 美香','—','過去リード','ドバイ',21,'cold','育成中・第2週','自動（ステップメール）'],
+  ['小野 博','小野パートナーズ','名刺','法人',12,'cold','育成中・第1週','自動（ステップメール）'],
+  ['森 武','モリエステート','過去リード','投資',5,'cold','取込済み・クリーニング中','シーケンス投入'],
+];
+const srcBadge={'名刺':'b-orange','過去リード':'b-teal','SNS':'b-blue','LPフォーム':'b-blue','GoHighLevel':'b-grey','Gmail':'b-grey'};
+let segFilter='all';
+function renderLeads(hlFirst){
+  const q=(document.getElementById('leadSearch').value||'').toLowerCase();
+  let rows='',n=0;
+  leads.forEach((l,idx)=>{
+    const [name,co,src,seg,score,heat,status,next]=l;
+    if(segFilter!=='all'&&seg!==segFilter)return;
+    if(q&&!(name+' '+co).toLowerCase().includes(q))return;
+    n++;
+    rows+=`<tr class="row-hover${hlFirst&&idx===0?' row-new':''}" onclick="openDrawer(${idx})">
+      <td><b>${name} 様</b><div style="font-size:11px;color:var(--muted);">${co}</div></td>
+      <td><span class="badge ${srcBadge[src]}">${src}</span></td><td>${seg}</td>
+      <td><span class="score-pill"><span class="score-dot s-${heat}"></span>${score}</span></td>
+      <td style="font-size:12px;">${status}</td><td style="font-size:12px;">${next}</td></tr>`;
+  });
+  document.getElementById('leadRows').innerHTML=rows||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">該当するリードがありません。検索やフィルタを解除してください。</td></tr>';
+  document.getElementById('leadCount').textContent=`・30,000件中 ${n}件を表示（サンプル）`;
+}
+document.querySelectorAll('#segChips .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#segChips .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); segFilter=c.dataset.seg; renderLeads();
+}));
+renderLeads();
+
+/* ================= リード詳細ドロワー ================= */
+const timelines={
+  '森田 賢二':[
+    ['6/20','展示会にて名刺交換（撮影登録）','+0'],
+    ['6/23','第1週メール「ドバイは本当に高い？」開封','+1'],
+    ['6/28','「生活費チェックリスト」をクリック','+3'],
+    ['7/2','法人移転に関する資料をダウンロード','+3'],
+    ['7/5','返信受信「役員数名の移転を検討」','+10'],
+    ['7/6','法人案件と自動判定','+30','hot'],
+    ['本日 8:58','相談予約ページを閲覧','+5','hot'],
+  ],
+  '西田 綾香':[
+    ['2024/11','過去リード（CSV）として取込','+0'],
+    ['6/10','第3週メール開封','+1'],
+    ['6/25','「ロンボク開発の未来」開封・クリック','+4'],
+    ['7/1','ロンボク視察を希望','+30','hot'],
+    ['本日 9:15','メールに返信','+10','hot'],
+  ],
+};
+function defaultTimeline(l){
+  return [['取込日','リードとして登録（'+l[2]+'）','+0'],['直近','ステップメール配信中・'+l[6],'—']];
+}
+function sparkline(score){
+  const pts=[0,0.1,0.18,0.3,0.42,0.62,0.8,1].map((p,i)=>`${8+i*26},${44-40*p}`).join(' ');
+  return `<svg viewBox="0 0 200 50" style="width:100%;height:50px;">
+    <polyline points="${pts}" fill="none" stroke="#F0B429" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="190" cy="4" r="4" fill="#F07B3F"/>
+    <text x="178" y="18" font-size="11" font-family="Manrope" font-weight="800" fill="#B4501B" text-anchor="end">${score}</text>
+  </svg>`;
+}
+function openDrawer(idx){
+  const l=leads[idx];
+  const [name,co,src,seg,score,heat]=l;
+  document.getElementById('drName').textContent=name+' 様';
+  document.getElementById('drCo').textContent=co;
+  document.getElementById('drScore').textContent=score;
+  document.getElementById('drDot').className='score-dot s-'+heat;
+  document.getElementById('drBadges').innerHTML=`<span class="badge ${srcBadge[src]}">${src}</span><span class="badge b-grey">${seg}</span>`;
+  const tl=timelines[name]||defaultTimeline(l);
+  let tlHtml='';
+  tl.forEach(t=>{tlHtml+=`<div class="tl-item${t[3]==='hot'?' hot':''}"><div class="tl-t">${t[1]}<span class="tl-pt">${t[2]}</span></div><div class="tl-s">${t[0]}</div></div>`;});
+  const isCard=src==='名刺';
+  document.getElementById('drBody').innerHTML=`
+    <div class="d-sec">
+      <h4>タッチポイント履歴</h4>
+      <div class="tl">${tlHtml}</div>
+    </div>
+    <div class="d-sec">
+      <h4>スコア推移</h4>
+      <div style="border:1px solid var(--line); border-radius:10px; padding:10px 12px;">${sparkline(score)}</div>
+    </div>
+    ${isCard?`<div class="d-sec"><h4>名刺画像（撮影登録）</h4>
+      <div class="mini-card"><div class="biz-card">
+        <div class="bc-logo">${name==='森田 賢二'?'AT':'--'}</div>
+        <div class="bc-co">${co}</div><div class="bc-name">${name}</div><div class="bc-title">担当役職</div>
+        <div class="bc-foot">撮影：ユパン・${name==='森田 賢二'?'6/20 展示会':'登録済み'}</div>
+      </div></div></div>`:''}
+    <div class="d-sec">
+      <h4>担当・次のアクション</h4>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <div class="assign-avatar" style="width:36px;height:36px;font-size:12px;">ユ</div>
+        <div><div style="font-weight:700;font-size:13px;">ユパン</div><div style="font-size:11px;color:var(--muted);">初回相談担当</div></div>
+        <span class="badge b-green" style="margin-left:auto;">自動アサイン</span>
+      </div>
+      <div class="ai-box">
+        <div class="ai-t">✨ AIおすすめアクション</div>
+        <p>${score>=70?'本日中の電話を推奨。意思決定者であり、予約ページまで到達しています。返信案を自動作成済みです。':score>=40?'予約リンクの送付を推奨。興味は高まっていますが、まだ予約に至っていません。':'ステップメールで育成を継続。反応があり次第、自動で通知します。'}</p>
+        ${score>=40?`<button class="ai-chip" style="margin-top:8px;" onclick="openAiMail('${name}')">✨ AI返信案を見る</button>`:''}
+      </div>
+    </div>`;
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');}
+
+/* ================= 名刺スキャン ================= */
+function openScan(){
+  ['ocr1','ocr2','ocr3','ocr4'].forEach(id=>{const e=document.getElementById(id); e.textContent=''; e.classList.remove('filled');});
+  ['ss1','ss2','ss3','ss4'].forEach(id=>document.getElementById(id).className='scan-step');
+  document.getElementById('scanBtn').style.display='inline-flex';
+  document.getElementById('scanBtn').disabled=false;
+  document.getElementById('scanCloseBtn').style.display='none';
+  document.getElementById('scanOverlay').classList.add('show');
+}
+function closeScan(){document.getElementById('scanOverlay').classList.remove('show');}
+function runScan(){
+  const btn=document.getElementById('scanBtn'); btn.disabled=true;
+  const card=document.getElementById('bizCard');
+  card.classList.add('scanning');
+  const step=(id,cls)=>document.getElementById(id).className='scan-step '+cls;
+  step('ss1','on');
+  const fills=[['ocr1','中村 翔太'],['ocr2','株式会社サンライズ商事・事業開発部 部長'],['ocr3','s.nakamura@sunrise-t.example'],['ocr4','03-1234-5678']];
+  fills.forEach((f,i)=>setTimeout(()=>{
+    const e=document.getElementById(f[0]); e.textContent=f[1]; e.classList.add('filled');
+  },1400+i*450));
+  setTimeout(()=>{step('ss1','ok'); step('ss2','on');},3300);
+  setTimeout(()=>{step('ss2','ok'); step('ss3','on'); toast('重複チェック：一致なし（新規リード）');},4100);
+  setTimeout(()=>{step('ss3','ok'); step('ss4','on');},4900);
+  setTimeout(()=>{
+    step('ss4','ok');
+    card.classList.remove('scanning');
+    btn.style.display='none';
+    document.getElementById('scanCloseBtn').style.display='inline-flex';
+    toast('中村 翔太 様をExceed Boxに登録・第1週メールへ分類しました');
+  },5600);
+}
+function finishScan(){
+  closeScan();
+  if(!leads.some(l=>l[0]==='中村 翔太')){
+    leads.unshift(['中村 翔太','株式会社サンライズ商事','名刺','法人',0,'cold','新規登録・第1週メールへ分類済み','自動（ステップメール）']);
+  }
+  segFilter='all';
+  document.querySelectorAll('#segChips .chip').forEach(x=>x.classList.toggle('on',x.dataset.seg==='all'));
+  document.getElementById('leadSearch').value='';
+  renderLeads(true);
+  const badge=document.querySelector('.nav-item[data-view="leads"]');
+  go('leads');
+}
+
+/* ================= AI返信案 ================= */
+const aiMails={
+  '森田 賢二':{meta:'宛先：森田 賢二 様（青山商事株式会社）・文脈：法人移転・スコア92',
+    body:`森田様
+
+お世話になっております。Exceed Real Estateの担当ユパンです。
+
+先日は「役員の方数名のドバイ移転をご検討」との
+ご返信をいただき、ありがとうございます。
+
+法人でのお手続きは、ビザ・銀行口座・オフィス選定の
+順序が重要になります。御社の状況に合わせた進め方を
+30分ほどでご説明できますので、下記よりご都合の良い
+日時をお選びいただけますでしょうか。
+
+▶ 相談日時を選ぶ（30秒で完了）
+
+ユパン｜Exceed Real Estate 初回相談担当`},
+  '西田 綾香':{meta:'宛先：西田 綾香 様（個人投資家）・文脈：ロンボク視察希望・スコア74',
+    body:`西田様
+
+ご返信ありがとうございます。
+ロンボク視察にご興味をお持ちとのこと、承知いたしました。
+
+現在、経済特区に隣接するエリアの開発が進んでおり、
+視察では開発予定地・完成済み区画・周辺環境を
+半日でご覧いただけます。
+
+まずは30分のオンライン相談で、視察の流れと
+チェックポイントをご案内できます。
+
+▶ 相談日時を選ぶ
+
+ロンボクデスク｜Exceed Real Estate`},
+  '長谷川 里奈':{meta:'宛先：長谷川 里奈 様（株式会社ベレーザ）・文脈：生活費チェックリストDL・スコア45',
+    body:`長谷川様
+
+「ドバイ生活費チェックリスト」のダウンロード
+ありがとうございます。
+
+チェックリストの中で特にご質問が多いのは
+「住居費」と「学校」の項目です。もし気になる点が
+あれば、無料の30分相談でお答えできます。
+
+▶ 相談日時を選ぶ（売り込みはしません）
+
+チアキ｜Exceed Real Estate 移住・ライフスタイル担当`},
+};
+let aiTypeIv=null;
+function openAiMail(name){
+  const m=aiMails[name]||aiMails['長谷川 里奈'];
+  document.getElementById('aiMeta').textContent=m.meta;
+  document.getElementById('aiSendBtn').disabled=true;
+  document.getElementById('aiOverlay').classList.add('show');
+  if(aiTypeIv)clearInterval(aiTypeIv);
+  aiTypeIv=typeText(document.getElementById('aiMailBody'),m.body,14,()=>{
+    document.getElementById('aiSendBtn').disabled=false;
+  });
+}
+function closeAi(){
+  if(aiTypeIv)clearInterval(aiTypeIv);
+  document.getElementById('aiOverlay').classList.remove('show');
+}
+
+/* ================= カンバン ================= */
+const kbCols=['新規','ナーチャリング中','反応あり','商談予約','商談中','成約'];
+let kbCards=[
+  {n:'中村 翔太 様',c:'サンライズ商事',s:0,seg:'法人',col:0},
+  {n:'森 武 様',c:'モリエステート',s:5,seg:'投資',col:0},
+  {n:'小野 博 様',c:'小野パートナーズ',s:12,seg:'法人',col:1},
+  {n:'安藤 美香 様',c:'—',s:21,seg:'ドバイ',col:1},
+  {n:'藤井 直子 様',c:'フジイデザイン',s:27,seg:'移住',col:1},
+  {n:'田村 由紀 様',c:'—',s:34,seg:'ロンボク',col:2},
+  {n:'長谷川 里奈 様',c:'ベレーザ',s:45,seg:'移住',col:2},
+  {n:'西田 綾香 様',c:'個人投資家',s:74,seg:'ロンボク',col:2},
+  {n:'久保 大地 様',c:'フリーランス',s:58,seg:'ドバイ',col:3},
+  {n:'森田 賢二 様',c:'青山商事',s:92,seg:'法人',col:3},
+  {n:'鈴木 様',c:'高予算・視察中',s:88,seg:'ロンボク',col:4},
+  {n:'渡辺 様',c:'2LDK契約',s:100,seg:'ドバイ',col:5},
+];
+function heatOf(s){return s>=70?'hot':s>=35?'warm':'cold';}
+function renderKanban(){
+  const el=document.getElementById('kanban');
+  let html='';
+  kbCols.forEach((c,ci)=>{
+    const cards=kbCards.filter(k=>k.col===ci);
+    html+=`<div class="kb-col${ci===5?' kb-won':''}" data-col="${ci}" ondragover="kbOver(event)" ondragleave="kbLeave(event)" ondrop="kbDrop(event)">
+      <h4>${c}<span class="kb-n">${cards.length}</span></h4>`;
+    cards.forEach(k=>{
+      const gi=kbCards.indexOf(k);
+      html+=`<div class="kb-card" draggable="true" data-i="${gi}" ondragstart="kbStart(event)" ondragend="kbEnd(event)">
+        <div class="kc-name">${k.n}</div><div class="kc-sub">${k.c}</div>
+        <div class="kc-foot"><span class="badge b-grey">${k.seg}</span><span class="score-pill" style="font-size:11.5px;"><span class="score-dot s-${heatOf(k.s)}"></span>${k.s}</span></div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+let dragI=null;
+function kbStart(e){dragI=+e.target.dataset.i; e.target.classList.add('dragging'); e.dataTransfer.effectAllowed='move';}
+function kbEnd(e){e.target.classList.remove('dragging');}
+function kbOver(e){e.preventDefault(); e.currentTarget.classList.add('over');}
+function kbLeave(e){e.currentTarget.classList.remove('over');}
+function kbDrop(e){
+  e.preventDefault();
+  const col=+e.currentTarget.dataset.col;
+  e.currentTarget.classList.remove('over');
+  if(dragI!==null){
+    const from=kbCards[dragI].col;
+    kbCards[dragI].col=col;
+    renderKanban();
+    if(from!==col)toast(`${kbCards[dragI].n}を「${kbCols[col]}」に移動しました（CRMにも自動反映：デモ）`);
+    dragI=null;
+  }
+}
+renderKanban();
+
+/* ================= ステップメール ================= */
+const seq=[
+  [1,'ドバイは本当に高い？','先入観を崩す','記事を読む',9800,'24.6%','4.1%'],
+  [2,'ドバイで賢く暮らす方法','興味を喚起','生活費チェックリスト',9540,'21.9%','5.2%'],
+  [3,'日本人・ノマド・経営者がドバイを選ぶ理由','移住ニーズを特定','無料相談',9350,'19.4%','3.8%'],
+  [4,'ドバイ不動産・内見前に知るべきこと','投資教育','物件相談',9120,'17.2%','3.1%'],
+  [5,'ロンボク開発の未来','視察ニーズを特定','視察相談',8930,'18.8%','4.6%'],
+  [6,'海外不動産でよくある失敗','不安を解消','30分相談',8760,'16.1%','2.9%'],
+  [7,'相談事例・購入パターン','商談化','カレンダー予約',8600,'15.4%','3.4%'],
+];
+(function(){
+  let html='';
+  seq.forEach(s=>{
+    html+=`<div class="seq-step">
+      <div class="seq-week"><div class="w-num">第${s[0]}週</div></div>
+      <div class="seq-body"><div class="s-subject">${s[1]}</div><div class="s-meta">目的：${s[2]}　CTA：<b>${s[3]}</b></div></div>
+      <div class="seq-stats">
+        <div class="seq-stat"><div class="v num">${s[4].toLocaleString()}</div><div class="l">配信</div></div>
+        <div class="seq-stat"><div class="v num">${s[5]}</div><div class="l">開封率</div></div>
+        <div class="seq-stat"><div class="v num">${s[6]}</div><div class="l">クリック率</div></div>
+        <label class="switch"><input type="checkbox" checked onchange="toast('第${s[0]}週を'+(this.checked?'配信再開':'一時停止')+'しました（デモ）')"><span class="slider"></span></label>
+      </div></div>`;
+  });
+  document.getElementById('seqList').innerHTML=html;
+})();
+
+/* ================= 予約ウィザード ================= */
+const owners={
+  'まずは30分相談':{n:'ユパン',r:'初回相談担当',a:'ユ'},
+  'ドバイ移住の相談':{n:'チアキ',r:'移住・ライフスタイル担当',a:'チ'},
+  '不動産投資の相談':{n:'ドバイデスク',r:'現地情報・ドバイ',a:'ド'},
+  'ロンボク視察の相談':{n:'ロンボクデスク',r:'視察・開発案件',a:'ロ'},
+};
+let chosenTopic=null;
+const days=[['月','7/6'],['火','7/7'],['水','7/8'],['木','7/9'],['金','7/10']];
+const slotTimes=['10:00','11:30','14:00','16:00'];
+const takenSlots=new Set(['0-1','1-0','1-3','2-2','3-0','4-1','4-3']);
+function pickTopic(t){
+  chosenTopic=t;
+  document.getElementById('topicLabel').textContent=t+'（オンライン30分）';
+  let html='';
+  days.forEach((d,di)=>{
+    html+=`<div class="cal-day"><div class="d-name">${d[0]}</div><div class="d-num num">${d[1]}</div>`;
+    slotTimes.forEach((s,si)=>{
+      const key=di+'-'+si;
+      html+= takenSlots.has(key)
+        ? `<button class="slot taken" disabled>${s}</button>`
+        : `<button class="slot" onclick="pickSlot(this,${di},${si})">${s}</button>`;
+    });
+    html+='</div>';
+  });
+  document.getElementById('slotGrid').innerHTML=html;
+  document.getElementById('bkStep1').style.display='none';
+  document.getElementById('bkStep2').style.display='block';
+  setStep(2);
+}
+function pickSlot(el,di,si){
+  el.classList.add('picked');
+  const day=days[di][0]+' '+days[di][1], time=slotTimes[si];
+  const o=owners[chosenTopic];
+  setTimeout(()=>{
+    document.getElementById('bkStep2').style.display='none';
+    document.getElementById('bkStep3').style.display='block';
+    document.getElementById('confirmLine').textContent=`${chosenTopic}・${day} ${time}（日本時間）・オンライン（URLはメールでお送りします）`;
+    document.getElementById('assignName').textContent=o.n;
+    document.getElementById('assignRole').textContent=o.r;
+    document.getElementById('assignAvatar').textContent=o.a;
+    setStep(3);
+    addCalendarEvent(o.n,di,si,chosenTopic);
+  },350);
+}
+function setStep(n){
+  ['ws1','ws2','ws3'].forEach((id,i)=>{
+    const e=document.getElementById(id);
+    e.classList.remove('on','done');
+    if(i+1<n)e.classList.add('done'); else if(i+1===n)e.classList.add('on');
+  });
+}
+function resetBooking(){
+  chosenTopic=null;
+  document.getElementById('bkStep3').style.display='none';
+  document.getElementById('bkStep2').style.display='none';
+  document.getElementById('bkStep1').style.display='block';
+  setStep(1);
+}
+
+/* ================= 週カレンダー ================= */
+const baseEvents={
+  '0-0':['朝会（チーム）','ev-blue'],
+  '1-2':['鈴木様・ロンボク視察','ev-orange'],
+  '2-1':['久保様・ドバイ移住相談','ev-teal'],
+  '3-3':['パイプライン定例','ev-blue'],
+  '4-0':['佐藤様・フォロー電話','ev-teal'],
+};
+let newEvent=null;
+function renderWeekCal(){
+  let html='<div class="wc-cell wc-head"></div>';
+  days.forEach(d=>html+=`<div class="wc-cell wc-head">${d[0]} ${d[1]}</div>`);
+  slotTimes.forEach((t,si)=>{
+    html+=`<div class="wc-cell wc-time num">${t}</div>`;
+    days.forEach((d,di)=>{
+      const key=di+'-'+si;
+      let ev='';
+      if(baseEvents[key]) ev=`<div class="wc-event ${baseEvents[key][1]}">${baseEvents[key][0]}</div>`;
+      if(newEvent && newEvent.key===key) ev=`<div class="wc-event ev-new">★ ${newEvent.label}</div>`;
+      html+=`<div class="wc-cell">${ev}</div>`;
+    });
+  });
+  document.getElementById('weekCal').innerHTML=html;
+}
+function addCalendarEvent(owner,di,si,label){
+  newEvent={key:di+'-'+si,label:'新規予約・'+label};
+  document.getElementById('calOwner').textContent=`カレンダー — ${owner}（今週）`;
+  document.getElementById('newBookingBadge').style.display='inline-block';
+  renderWeekCal();
+  toast(`予約完了・${owner}に自動アサイン・カレンダー確保・通知送信済み`);
+}
+renderWeekCal();
+
+/* ================= スマホ画面 ================= */
+function pDone(btn,msg){
+  const card=btn.closest('.p-card');
+  card.classList.add('done');
+  btn.disabled=true; btn.textContent='完了 ✓';
+  toast(msg);
+}
+function showPush(){
+  const p=document.getElementById('phonePush');
+  p.classList.remove('show'); void p.offsetWidth;
+  p.classList.add('show');
+  setTimeout(()=>p.classList.remove('show'),5200);
+}
+
+/* ================= ライブデモ ================= */
+let liveRunning=false, demoScore=31;
+function addFeed(icon,bg,text,pts,total){
+  const list=document.getElementById('feedList');
+  const div=document.createElement('div');
+  div.className='feed-item new';
+  div.innerHTML=`<div class="feed-ic" style="background:${bg};">${icon}</div>
+    <div class="feed-body"><div class="f-t">${text}</div><div class="f-time">たった今</div></div>
+    <div class="feed-score">${pts}${total?` → ${total}`:''}</div>`;
+  list.prepend(div);
+}
+function setLive(text,score){
+  document.getElementById('liveText').textContent=text;
+  if(score!==undefined){
+    demoScore=score;
+    const el=document.getElementById('liveScore');
+    el.textContent=score;
+    el.parentElement.style.transform='scale(1.12)';
+    setTimeout(()=>el.parentElement.style.transform='',200);
+  }
+}
+function startLiveDemo(){
+  if(liveRunning)return;
+  liveRunning=true; demoScore=31;
+  const btn=document.getElementById('liveBtn');
+  btn.disabled=true; btn.textContent='● ライブデモ実行中…';
+  const bar=document.getElementById('liveBar');
+  bar.classList.add('show');
+  document.getElementById('liveScore').textContent=demoScore;
+  go('tracking');
+
+  const steps=[
+    [0,   ()=>setLive('ある1日を30秒で再現します。主役は休眠リード「高田 誠 様（元・展示会名刺）」— 現在スコア31。',31)],
+    [2600,()=>{setLive('08:00 ステップメール「ロンボク開発の未来」を自動配信…',31);
+               addFeed('📨','#EEF2F4','<b>第5週メール</b>を8,930名に自動配信','—');}],
+    [5200,()=>{setLive('高田様がメールを開封（+1）',32);
+               addFeed('👀','var(--blue-soft)','<b>高田 誠 様</b>がメールを開封','+1','32');}],
+    [7400,()=>{setLive('リンクをクリック → LPを閲覧（+3 +3）',38);
+               addFeed('↗','var(--blue-soft)','<b>高田 誠 様</b>が「視察チェックリスト」をクリック・LP閲覧','+6','38');}],
+    [9600,()=>{setLive('返信を受信「来月ロンボクを見に行きたい」（+10）',48);
+               addFeed('✉','var(--orange-soft)','<b>高田 誠 様</b>が返信「来月ロンボクを見に行きたい」','+10','48');}],
+    [12000,()=>{setLive('🚨 しきい値40を超過 — 営業に自動通知。AIが返信案を作成…',48);
+               document.getElementById('alertScore').textContent='48';
+               document.getElementById('alertText').textContent='高田 誠 様・ロンボク視察に関心・返信あり・AIが返信案を作成済み';
+               document.getElementById('hotAlert').style.animation='pop .5s';
+               addFeed('🔥','var(--orange-soft)','<b>高スコア検知</b>・ロンボクデスクへ即時通知・✨AI返信案を自動作成','通知');}],
+    [15000,()=>{setLive('ロンボク視察を正式に希望（+30）→ 予約リンクを自動送付',78);
+               addFeed('🏝','var(--amber-soft)','<b>高田 誠 様</b>がロンボク視察を希望','+30','78');}],
+    [17600,()=>{setLive('高田様がカレンダーから 木 7/9 14:00 を選択 — 予約完了（+20）',98);
+               addFeed('✓','var(--green-soft)','<b>高田 誠 様</b>が相談予約を完了（ロンボク視察）','+20','98');}],
+    [20000,()=>{newEvent={key:'3-2',label:'新規予約・ロンボク視察（高田様）'};
+               document.getElementById('calOwner').textContent='カレンダー — ロンボクデスク（今週）';
+               document.getElementById('newBookingBadge').style.display='inline-block';
+               renderWeekCal();
+               go('assign');
+               setLive('ロンボクデスクのカレンダーに自動登録・スマホへ即時通知 →',98);
+               showPushRemote('高田 誠 様の視察相談が入りました（木 7/9 14:00）');}],
+    [23400,()=>{setLive('✅ 休眠リードが、誰も追客せずに商談予約に変わりました。これがExceed Boxです。',98);}],
+    [27400,()=>{bar.classList.remove('show');
+               btn.disabled=false; btn.textContent='▶ ライブデモ（自動再生）';
+               liveRunning=false;
+               toast('ライブデモ終了。もう一度再生できます。');}],
+  ];
+  steps.forEach(s=>setTimeout(s[1],s[0]));
+}
+function showPushRemote(text){
+  document.getElementById('pushText').textContent=text;
+}
+
+/* 初期表示 */
+animateDashboard();
+</script>
+</body>
+</html>
