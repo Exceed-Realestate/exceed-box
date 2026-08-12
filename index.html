@@ -402,6 +402,7 @@
       <span class="crumb" id="topCrumb">営業状況サマリー</span>
       <span style="flex:1;"></span>
       <button class="live-btn" id="liveBtn" onclick="startLiveDemo()">▶ ライブデモ（自動再生）</button>
+      <button class="xm-btn" id="xmBtn" onclick="xmToggle()">❓ 解説モード / Explain</button>
       <span class="demo-badge">デモ・ダミーデータ</span>
       <div class="avatar">ユ</div>
     </div>
@@ -1511,5 +1512,904 @@ function showPushRemote(text){
 /* 初期表示 */
 animateDashboard();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     解説モード / EXPLAIN MODE  — self-contained annotation layer
+     Toggle with the 解説モード button in the topbar.
+     Nothing below this comment affects the dashboard when off.
+     ══════════════════════════════════════════════════════════════ -->
+<style>
+/* ---------- highlight layer ---------- */
+body.xm .xm-tag{ outline:2px dashed var(--xc); outline-offset:1px; background:var(--xcbg)!important; cursor:help!important; }
+body.xm .xm-tag:hover{ outline-style:solid; outline-width:3px; box-shadow:0 0 0 4px var(--xcbg); }
+body.xm .xm-tag.xm-sel{ outline:3px solid var(--xc); box-shadow:0 0 0 5px var(--xcbg), 0 6px 22px rgba(0,0,0,.18); }
+body.xm .xm-tag::after{
+  content:attr(data-xm-n); position:absolute; top:-9px; left:-9px; z-index:40;
+  min-width:17px; height:17px; padding:0 4px; border-radius:9px;
+  background:var(--xc); color:#fff; font:800 10px/17px 'Manrope',sans-serif;
+  text-align:center; letter-spacing:0; pointer-events:none; box-shadow:0 1px 4px rgba(0,0,0,.3);
+}
+body.xm .xm-tag.xm-nobadge::after{ display:none; }
+body.xm.xm-dim .xm-tag:not(.xm-on){ outline-color:#C9CDD6; background:transparent!important; opacity:.45; }
+body.xm.xm-dim .xm-tag:not(.xm-on)::after{ background:#C9CDD6; }
+body.xm *{ user-select:none; }
+body.xm .app{ margin-right:var(--xpw); min-width:940px; }
+body.xm .drawer,
+body.xm .live-bar,
+body.xm .overlay,
+body.xm #toast{ right:var(--xpw); }
+body.xm .overlay{ left:0; }
+
+/* ---------- topbar button ---------- */
+.xm-btn{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:#fff;
+  color:var(--ink); border-radius:99px; padding:7px 14px; font:800 12px/1 'Noto Sans JP',sans-serif;
+  cursor:pointer; font-family:inherit; white-space:nowrap; transition:.15s; }
+.xm-btn:hover{ border-color:#B9BEC9; }
+.xm-btn.on{ background:#15171C; color:#FFD84D; border-color:#15171C; }
+
+/* ---------- panel ---------- */
+:root{ --xpw:420px; }
+.xm-panel{ position:fixed; top:0; right:0; width:var(--xpw); height:100vh; background:#fff; z-index:9000;
+  border-left:1px solid var(--line); box-shadow:-8px 0 30px rgba(19,23,28,.10);
+  display:none; flex-direction:column; font-family:'Noto Sans JP',system-ui,sans-serif; }
+body.xm .xm-panel{ display:flex; }
+.xm-head{ padding:14px 16px 12px; background:#15171C; color:#fff; flex-shrink:0; }
+.xm-head h2{ font-size:14px; font-weight:900; display:flex; align-items:center; gap:8px; }
+.xm-head h2 .dot{ width:8px; height:8px; border-radius:50%; background:#FFD84D; }
+.xm-head p{ font-size:11px; color:#9AA0AC; margin-top:4px; line-height:1.5; }
+.xm-head .xm-x{ position:absolute; top:12px; right:12px; background:none; border:none; color:#9AA0AC;
+  font-size:17px; cursor:pointer; font-family:inherit; }
+.xm-head .xm-x:hover{ color:#fff; }
+
+.xm-tools{ padding:10px 14px; border-bottom:1px solid var(--line); background:#FAFBFC; flex-shrink:0; }
+.xm-legend{ display:flex; flex-wrap:wrap; gap:5px; }
+.xm-lg{ display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); background:#fff;
+  border-radius:99px; padding:3px 9px 3px 6px; font-size:10.5px; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--ink); }
+.xm-lg i{ width:8px; height:8px; border-radius:2px; display:block; }
+.xm-lg b{ font-family:'Manrope'; color:var(--muted); font-weight:800; }
+.xm-lg.off{ opacity:.4; }
+.xm-overlays{ display:flex; gap:5px; margin-top:8px; flex-wrap:wrap; }
+.xm-ob{ border:1px solid var(--line); background:#fff; border-radius:7px; padding:4px 9px;
+  font-size:10.5px; font-weight:700; cursor:pointer; font-family:inherit; color:var(--ink); }
+.xm-ob:hover{ background:#F2F3F6; }
+
+.xm-body{ flex:1; overflow-y:auto; padding:14px 16px 40px; }
+
+/* detail card */
+.xm-crumb{ font-size:10.5px; color:var(--muted); font-weight:700; letter-spacing:.04em; margin-bottom:6px; }
+.xm-cat{ display:inline-flex; align-items:center; gap:6px; border-radius:99px; padding:3px 10px;
+  font-size:10.5px; font-weight:800; color:#fff; margin-bottom:10px; }
+.xm-jp{ font-size:17px; font-weight:900; line-height:1.35; }
+.xm-en{ font-size:13px; font-weight:700; color:#B4501B; margin-top:2px; }
+.xm-f{ margin-top:14px; }
+.xm-f h4{ font-size:10.5px; font-weight:900; letter-spacing:.09em; color:var(--muted); margin-bottom:5px;
+  display:flex; align-items:center; gap:6px; }
+.xm-f h4 span{ font-size:10px; color:#AEB3BE; font-weight:700; letter-spacing:0; }
+.xm-f p{ font-size:12.8px; line-height:1.68; color:var(--ink); }
+.xm-f.build{ border-left:3px solid #FFD84D; background:#FFFCF0; padding:10px 12px; border-radius:0 8px 8px 0; }
+.xm-f.data{ border-left:3px solid #7A5FB8; background:#F7F5FC; padding:10px 12px; border-radius:0 8px 8px 0; }
+.xm-f.data p{ font-family:'Manrope','Noto Sans JP',monospace; font-size:11.5px; color:#4A3A78; }
+.xm-empty{ font-size:12.5px; line-height:1.75; color:var(--muted); }
+.xm-empty b{ color:var(--ink); }
+.xm-steps{ margin:12px 0; }
+.xm-steps div{ display:flex; gap:9px; font-size:12.5px; padding:5px 0; align-items:flex-start; }
+.xm-steps span{ width:17px; height:17px; border-radius:50%; background:#15171C; color:#FFD84D;
+  font:800 10px/17px 'Manrope'; text-align:center; flex-shrink:0; }
+
+/* index list */
+.xm-ix h5{ font-size:10.5px; font-weight:900; letter-spacing:.09em; color:var(--muted);
+  margin:16px 0 6px; padding-bottom:5px; border-bottom:1px solid var(--line); }
+.xm-ix button{ display:flex; width:100%; gap:8px; align-items:center; text-align:left; border:none;
+  background:none; padding:5px 6px; border-radius:6px; cursor:pointer; font-family:inherit; font-size:12px; }
+.xm-ix button:hover{ background:#F2F3F6; }
+.xm-ix button i{ width:7px; height:7px; border-radius:2px; flex-shrink:0; }
+.xm-ix button b{ font-family:'Manrope'; font-size:10px; color:#AEB3BE; width:22px; flex-shrink:0; }
+.xm-ix button u{ text-decoration:none; color:var(--muted); font-size:10.5px; margin-left:auto; flex-shrink:0; }
+
+.xm-nav{ display:flex; gap:6px; margin-top:18px; padding-top:12px; border-top:1px solid var(--line); }
+.xm-nav button{ flex:1; border:1px solid var(--line); background:#fff; border-radius:8px; padding:7px;
+  font-size:11.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+.xm-nav button:hover{ background:#F2F3F6; }
+.xm-nav button.k{ background:#15171C; color:#FFD84D; border-color:#15171C; }
+
+@media (max-width:1280px){ :root{ --xpw:360px; } }
+@media (max-width:1000px){ :root{ --xpw:320px; } }
+</style>
+
+<aside class="xm-panel" id="xmPanel">
+  <div class="xm-head" style="position:relative;">
+    <button class="xm-x" onclick="xmToggle(false)">✕</button>
+    <h2><span class="dot"></span>解説モード / Explain Mode</h2>
+    <p>ハイライトされた要素をクリックすると、日本語表記・英訳・意味・現在の挙動・実装に必要なものが表示されます。この間、通常の動作は停止しています。</p>
+  </div>
+  <div class="xm-tools">
+    <div class="xm-legend" id="xmLegend"></div>
+    <div class="xm-overlays">
+      <button class="xm-ob" onclick="xmOverlay('scan')">📇 名刺スキャン画面</button>
+      <button class="xm-ob" onclick="xmOverlay('ai')">✨ AI返信画面</button>
+      <button class="xm-ob" onclick="xmOverlay('drawer')">◉ リード詳細</button>
+      <button class="xm-ob" onclick="xmOverlay('close')">✕ 閉じる</button>
+      <button class="xm-ob" onclick="xmBooking(1)">予約① メール</button>
+      <button class="xm-ob" onclick="xmBooking(2)">予約② 日時選択</button>
+      <button class="xm-ob" onclick="xmBooking(3)">予約③ 完了</button>
+    </div>
+  </div>
+  <div class="xm-body" id="xmBody"></div>
+</aside>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   EXPLAIN MODE
+   ═══════════════════════════════════════════════════════════════ */
+const XCAT={
+  nav:   {c:'#3E7CB1', jp:'ナビゲーション',   en:'Navigation'},
+  metric:{c:'#E8A23D', jp:'指標・KPI',       en:'Metric / KPI'},
+  chart: {c:'#7A5FB8', jp:'グラフ',           en:'Chart'},
+  data:  {c:'#1FA36B', jp:'データ・一覧',     en:'Data / list'},
+  action:{c:'#F07B3F', jp:'操作ボタン',       en:'Action'},
+  input: {c:'#0E8C82', jp:'入力・絞り込み',   en:'Input / filter'},
+  ai:    {c:'#D6409F', jp:'AI機能',           en:'AI feature'},
+  status:{c:'#6E7480', jp:'状態表示',         en:'Status / label'},
+  system:{c:'#15171C', jp:'システム構成',     en:'System / integration'},
+};
+const XVIEW={
+  chrome:'共通UI / Global chrome', dashboard:'ダッシュボード / Dashboard',
+  leads:'リード管理 / Leads', kanban:'商談パイプライン / Pipeline',
+  nurture:'ステップメール / Step-mail', sns:'SNS企画 / SNS content',
+  tracking:'反応検知 / Tracking', booking:'予約フロー / Booking',
+  assign:'自動アサイン / Assignment', today:'本日のアクション / Mobile',
+  arch:'システム連携 / Architecture', modal:'モーダル・ドロワー / Overlays',
+};
+
+/* Registry. one entry = one annotated element (or one repeated class).
+   sel=CSS selector · v=view · cat=category · jp/en=label · means · now · real · data */
+const XR=[
+/* ───────── GLOBAL CHROME ───────── */
+{sel:'.sidebar .logo', v:'chrome', cat:'nav', jp:'Exceed Box ロゴ', en:'Exceed Box logo / brand mark',
+ means:'製品名。JAIのデモでは「OneBox」だった箇所で、色とロゴだけを差し替えたもの。',
+ now:'静的な表示。クリックしても何も起きない。',
+ real:'ホーム（ダッシュボード）へのリンクにする。ロゴは最終的な社内ブランドが決まってから確定させる。',
+ data:'static'},
+{sel:'.nav-item[data-view="dashboard"]', v:'chrome', cat:'nav', jp:'ダッシュボード', en:'Dashboard',
+ means:'経営者・管理者が最初に見る画面。全体の数字がここに集まる。',
+ now:'go("dashboard") でセクションを切り替え、KPIのカウントアップと3種のグラフを再生する。',
+ real:'ロール別に出し分ける（経営=売上まで / 営業=自分の数字のみ）。',
+ data:'GET /api/dashboard?range=8w'},
+{sel:'.nav-item[data-view="today"]', v:'chrome', cat:'nav', jp:'本日のアクション', en:'Today’s actions',
+ means:'営業担当が実際に一日中見る画面。スマホ想定。',
+ now:'スマホ枠のモックを表示。バッジの「5」はHTMLに直書き。',
+ real:'ログイン中の担当者に割り当てられた本日のタスク件数を返す。バッジは未完了件数のリアルタイム値。',
+ data:'GET /api/tasks?owner=me&date=today'},
+{sel:'.nav-item[data-view="leads"]', v:'chrome', cat:'nav', jp:'リード管理・取込', en:'Lead management & import',
+ means:'全リードの母数（3万件想定）と、そこへの取込口をまとめた画面。',
+ now:'10件のダミー配列を描画するだけ。',
+ real:'ページネーション・サーバーサイド検索・権限フィルタが必須。3万件をブラウザに全部渡してはいけない。',
+ data:'GET /api/leads?page&q&segment'},
+{sel:'.nav-item[data-view="kanban"]', v:'chrome', cat:'nav', jp:'商談パイプライン', en:'Deal pipeline (kanban)',
+ means:'案件がどの段階にあるかをカードで見る画面。',
+ now:'12枚のカードをドラッグで動かせるが、リロードすると元に戻る。',
+ real:'ドロップでステージ更新をPATCHし、CRM側にも反映。段階遷移の履歴を残す。',
+ data:'PATCH /api/deals/:id { stage }'},
+{sel:'.nav-item[data-view="nurture"]', v:'chrome', cat:'nav', jp:'ステップメール', en:'Step-mail (drip nurture)',
+ means:'休眠リードを自動で温める7通の連載メール。この製品の中核。',
+ now:'7ステップの表と開封率を静的表示。トグルはトーストを出すだけ。',
+ real:'配信基盤（SendGrid等）との接続、配信停止・バウンス管理、特定電子メール法のオプトアウト導線。',
+ data:'GET /api/sequences/:id/steps'},
+{sel:'.nav-item[data-view="sns"]', v:'chrome', cat:'nav', jp:'SNS企画', en:'SNS content planning',
+ means:'あなたが追加した画面。JAIのOneBoxには存在しない。SNS投稿からメールへの導線設計。',
+ now:'4パターン20企画の静的な表。',
+ real:'投稿カレンダー化し、実績（保存数・LP流入）を各企画行に紐づける。',
+ data:'GET /api/content-plans'},
+{sel:'.nav-item[data-view="tracking"]', v:'chrome', cat:'nav', jp:'反応検知・スコア', en:'Reaction tracking & scoring',
+ means:'開封・クリック・返信を点数に変換し、誰を追うべきかを機械が決める仕組み。',
+ now:'固定のフィード5件とスコア表。ライブデモ実行時のみ動く。',
+ real:'メール配信基盤のwebhook（open/click/reply）を受けてスコアを加算。Webソケットでフィードを更新。',
+ data:'POST /webhooks/email  ·  WS /events'},
+{sel:'.nav-item[data-view="booking"]', v:'chrome', cat:'nav', jp:'予約フロー（顧客画面）', en:'Booking flow — prospect-facing',
+ means:'唯一「社外の人が見る」画面。他は全部社内用。',
+ now:'テーマ選択→枠選択→完了の3ステップを完全にシミュレート。',
+ real:'公開URLとして切り出し、カレンダー空き枠APIと接続。社内ダッシュボードとは別ドメイン／別認証。',
+ data:'GET /public/slots?topic  ·  POST /public/bookings'},
+{sel:'.nav-item[data-view="assign"]', v:'chrome', cat:'nav', jp:'自動アサイン', en:'Auto-assignment & calendar',
+ means:'予約が入ったとき誰の予定に入れるかのルールと、その結果のカレンダー。',
+ now:'4本のルール行と週カレンダーを静的表示。予約デモを通すと1件だけ★が入る。',
+ real:'Google Calendar双方向同期、担当者不在時のオーバーフロー、タイムゾーン（JST/GST）の扱い。',
+ data:'Google Calendar API  ·  GET /api/assignment-rules'},
+{sel:'.nav-item[data-view="arch"]', v:'chrome', cat:'nav', jp:'システム連携', en:'System integration map',
+ means:'あなたが追加した画面。Exceed Boxが既存ツールの上にどう乗るかの説明図。',
+ now:'3層の図と方針リスト。完全に静的。',
+ real:'各連携の「実際の接続状態（緑=接続済 / 赤=未接続）」を出すステータスページにできる。',
+ data:'GET /api/integrations/health'},
+{sel:'.nav-label', v:'chrome', cat:'nav', jp:'ナビ見出し（オーバービュー / パイプライン / 予約 / システム）',
+ en:'Nav section headings',
+ means:'画面を4グループに分けるラベル。オーバービュー・パイプライン・予約・システム。',
+ now:'静的テキスト。',
+ real:'ロールによって丸ごと非表示にする単位として使える（例：営業には「システム」を出さない）。',
+ data:'static'},
+{sel:'.side-foot', v:'chrome', cat:'status', jp:'EXCEED REAL ESTATE 様 / デモ環境', en:'Tenant name + environment badge',
+ means:'今どの会社のデータを見ているかの表示。JAI版ではここが「PT KLEO MANDALIKA RESORT 様」だった。',
+ now:'HTMLに直書き。',
+ real:'マルチテナントにするならログイン中のテナント名。しないなら固定でよいが「デモ環境」の文字は本番で必ず外す。',
+ data:'session.tenant'},
+{sel:'#topTitle', v:'chrome', cat:'nav', jp:'画面タイトル', en:'Page title',
+ means:'今どの画面にいるかの見出し。',
+ now:'titles配列から go() が書き換える。',
+ real:'そのまま。document.title とパンくずも同期させる。',
+ data:'client-side'},
+{sel:'#topCrumb', v:'chrome', cat:'nav', jp:'サブ見出し（パンくず）', en:'Breadcrumb / subtitle',
+ means:'画面の補足説明。件数や対象者を出す枠。',
+ now:'titles配列の2つ目の文字列。',
+ real:'実データの件数を入れる（例：「統合リード 30,000件」を実際の総数に）。',
+ data:'client-side'},
+{sel:'#liveBtn', v:'chrome', cat:'action', jp:'▶ ライブデモ（自動再生）', en:'Live demo (auto-play)',
+ means:'27秒の自動再生。休眠リード1件が開封→クリック→返信→予約に変わるまでを見せる営業用の再生ボタン。',
+ now:'11段のsetTimeoutで、反応検知→自動アサインの2画面を自動で行き来しながら実況バーを更新する。',
+ real:'本番には不要。デモ／研修モードとして残すなら本番データから隔離したサンドボックスで動かす。',
+ data:'client-side only'},
+{sel:'#xmBtn', v:'chrome', cat:'action', jp:'解説モード', en:'Explain mode (this button)',
+ means:'今あなたが押したボタン。画面を説明用に切り替える。',
+ now:'body に .xm クラスを付け、全要素にハイライトを貼り、通常のクリック動作を捕獲して止める。',
+ real:'本番では社内オンボーディング用に残す価値がある。外部公開時は隠す。',
+ data:'client-side only'},
+{sel:'.demo-badge', v:'chrome', cat:'status', jp:'デモ・ダミーデータ', en:'Demo / dummy data badge',
+ means:'この画面の数字が全部作り物であることの断り書き。',
+ now:'静的。',
+ real:'本番で必ず削除。ステージング環境だけ「STAGING」として出す。',
+ data:'static'},
+{sel:'.topbar .avatar', v:'chrome', cat:'status', jp:'ユーザーアバター（ユ）', en:'Signed-in user avatar',
+ means:'ログイン中の担当者。「ユ」＝ユパン。',
+ now:'文字が直書きされているだけ。メニューもない。',
+ real:'認証と接続。クリックでプロフィール・ログアウト・担当切替。ロールもここで判定。',
+ data:'session.user'},
+{sel:'.footer-note', v:'chrome', cat:'status', jp:'フッター注記', en:'Footer disclaimer',
+ means:'ダミーデータであることの再掲。',
+ now:'静的。',
+ real:'本番では削除。',
+ data:'static'},
+{sel:'#liveBar', v:'chrome', cat:'status', jp:'ライブ実況バー', en:'Live demo narration bar',
+ means:'ライブデモ中だけ下部に出る実況テロップとスコア表示。',
+ now:'startLiveDemo() のときだけ .show が付く。',
+ real:'デモ専用。本番では通知トーストに置き換わる。',
+ data:'client-side only'},
+
+/* ───────── DASHBOARD ───────── */
+{sel:'.kpis .kpi:nth-child(1)', v:'dashboard', cat:'metric', jp:'総リード数 30,000', en:'Total leads — 30,000',
+ means:'名刺・Excel・Gmail・CRMに散らばっていたリードを1か所に統合した後の総数。JAIの提案書が「過去リード2〜3万件」と言っている、まさにその数字。',
+ now:'data-count="30000" をアニメーションで数え上げるだけ。実データではない。',
+ real:'重複統合後のユニーク件数。名寄せロジック（メール・電話・会社名の一致）を通した結果を返す。',
+ data:'SELECT count(*) FROM leads WHERE merged_into IS NULL'},
+{sel:'.kpis .kpi:nth-child(2)', v:'dashboard', cat:'metric', jp:'初回配信数 10,000（第1バッチ / 全3回）',
+ en:'First send volume — 10,000 (batch 1 of 3)',
+ means:'いきなり3万通送らず、1万通ずつ3回に分ける設計。バウンス率と迷惑メール判定を見ながら広げるため。',
+ now:'固定値。',
+ real:'配信基盤の実績値。バウンス率が閾値を超えたら次バッチを自動停止する制御が要る。',
+ data:'GET /api/campaigns/:id/stats'},
+{sel:'.kpis .kpi:nth-child(3)', v:'dashboard', cat:'metric', jp:'商談予約 30（今週 +8）', en:'Booked consultations — 30',
+ means:'メールから相談予約まで到達した件数。この製品が最終的に評価される数字。',
+ now:'固定値と固定の増分。',
+ real:'bookings テーブルの件数。前週比は週次スナップショットとの差分。',
+ data:'SELECT count(*) FROM bookings WHERE created_at > ...'},
+{sel:'.kpis .kpi:nth-child(4)', v:'dashboard', cat:'metric', jp:'商談中 18（今週 +4）', en:'In negotiation — 18',
+ means:'予約が実際の商談に進んだ数。予約30に対して18＝60%が商談化という前提。',
+ now:'固定値。',
+ real:'パイプラインの「商談中」以降のステージにあるカード数と一致させる必要がある。カンバンとの整合が必須。',
+ data:'SELECT count(*) FROM deals WHERE stage >= 4'},
+{sel:'.kpis .kpi:nth-child(5)', v:'dashboard', cat:'metric', jp:'成約 3（今週 +1）', en:'Closed deals — 3',
+ means:'契約に至った数。JAIのROI試算は「約2件で投資回収」なので、この3という数字が提案の成立条件そのもの。',
+ now:'固定値。',
+ real:'契約日・金額・担当を持つ closed 状態のレコード数。会計側の数字と突合できないと信用されない。',
+ data:'SELECT count(*) FROM deals WHERE stage = 5'},
+{sel:'.kpis .kpi.rev', v:'dashboard', cat:'metric', jp:'見込み売上 ¥128M（パイプライン加重）',
+ en:'Weighted pipeline revenue — ¥128M',
+ means:'各案件の金額に、ステージごとの成約確率を掛けて足したもの。ステージが進むほど確率が上がる。',
+ now:'128 という数字を数え上げるだけ。加重計算は存在しない。',
+ real:'ステージ別確率テーブル（例：予約10% / 商談40% / 見積70% / 成約100%）を持ち、金額×確率で毎日再計算。',
+ data:'SUM(deal.amount * stage.probability)'},
+{sel:'#lineChart', v:'dashboard', cat:'chart', jp:'商談予約・商談数の推移（過去8週間・累計）',
+ en:'Bookings & negotiations trend — last 8 weeks, cumulative',
+ means:'黄＝予約累計、黒＝商談化累計。2本の差が「予約したのに商談にならなかった数」で、そこが改善余地。',
+ now:'buildLineChart() が [0,2,5,9,14,19,24,30] と [0,1,2,4,7,10,14,18] のハードコード配列からSVGを生成し、線を描画アニメーションさせる。',
+ real:'週次集計テーブルを持ち、期間切替（8週/13週/年初来）とエリア別フィルタを付ける。',
+ data:'GET /api/metrics/weekly?weeks=8'},
+{sel:'.chart-legend', v:'dashboard', cat:'chart', jp:'凡例（商談予約 / 商談化）', en:'Chart legend',
+ means:'2本の線が何を指すかの説明。',
+ now:'静的。クリックしても線は消せない。',
+ real:'クリックで系列の表示/非表示を切り替えられるようにすると比較しやすい。',
+ data:'static'},
+{sel:'#donut', v:'dashboard', cat:'chart', jp:'エリア別 商談予約（ドーナツ）', en:'Bookings by area — donut',
+ means:'ドバイ18件 / ロンボク12件。2つの事業がどちらも動いていることを1つの図で見せる。',
+ now:'18/30 の比率をハードコードしてSVG円弧を描く。',
+ real:'エリアは将来増える（ドバイ・ロンボク・日本ショールーム）ので、固定2色ではなく配列で回す作りにする。',
+ data:'GET /api/metrics/by-area'},
+{sel:'.donut-item', v:'dashboard', cat:'chart', jp:'エリア内訳の行（ドバイ / ロンボク）', en:'Area breakdown rows',
+ means:'ドーナツの数値内訳。',
+ now:'HTMLに直書きの「18件」「12件」。',
+ real:'クリックでそのエリアに絞り込んだリード一覧へ遷移させると使える画面になる。',
+ data:'GET /api/metrics/by-area'},
+{sel:'#funnel', v:'dashboard', cat:'chart', jp:'休眠リード再活性ファネル', en:'Dormant-lead reactivation funnel',
+ means:'配信10,000 → 開封2,400 → クリック420 → 返信80 → 予約30 → 商談18 → 成約3。この製品の主張が全部この1枚に入っている。開封24%、成約は配信の0.03%。',
+ now:'funnelData 配列から生成。バー幅は視認性のため対数スケール（そう注記もされている）。',
+ real:'各段の実測値。段階間の転換率が落ちた箇所をアラートする仕組みがあると経営が見る画面になる。',
+ data:'GET /api/funnel?campaign=:id'},
+{sel:'.funnel-row', v:'dashboard', cat:'chart', jp:'ファネルの各段', en:'Funnel stage row',
+ means:'左＝段の名前、バー＝相対量、右＝実数と全体比。',
+ now:'クリック不可。',
+ real:'段をクリックしたらその母集団（例：クリックした420人）の一覧を出す。ここが一番使われる導線になる。',
+ data:'GET /api/funnel/:stage/leads'},
+{sel:'#view-dashboard .hot-item', v:'dashboard', cat:'data', jp:'🔥 ホットリード行（本日対応）', en:'Hot lead row — action today',
+ means:'今日中に触るべき人。スコア順で上から4件。営業が朝いちばんに見る場所。',
+ now:'4件がHTMLに直書き。リード一覧の配列とは別物なので、両者の数字がずれても誰も気づかない。',
+ real:'リードのスコア降順でサーバーから取得し、リード一覧と同じ単一の情報源にする。ここの重複が将来のバグの温床。',
+ data:'GET /api/leads?sort=score&limit=4'},
+{sel:'#view-dashboard .score-pill', v:'dashboard', cat:'metric', jp:'スコアピル（92 / 74 / 58 / 45）', en:'Interest score pill',
+ means:'興味の強さを0〜100+で表した数値。丸の色は 赤=hot(70+) / 橙=warm(35-69) / 灰=cold。',
+ now:'数字も色も直書き。',
+ real:'スコアリング表（開封+1〜高予算+30）の合計をサーバーが計算。時間経過による減点（decay）も要る。放置すると全員が満点になる。',
+ data:'GET /api/leads/:id/score'},
+{sel:'#view-dashboard .ai-chip', v:'dashboard', cat:'ai', jp:'✨ AI: 本日中に電話 / 返信案を確認 / 予約リンク送付',
+ en:'AI next-action chip',
+ means:'AIが「次に何をすべきか」を一言で提示するボタン。営業が考える手間を省くのが狙い。',
+ now:'openAiMail() を呼んでモーダルを開くだけ。文面は3人分がハードコードされている。',
+ real:'LLMに 会話履歴＋スコア＋閲覧コンテンツ を渡して文面を生成。送信前の人間承認は必須のまま残す。',
+ data:'POST /api/ai/draft-reply { leadId }'},
+{sel:'#view-dashboard .card-head .btn-ghost', v:'dashboard', cat:'action', jp:'スコア詳細 →', en:'Score details →',
+ means:'反応検知・スコア画面へのショートカット。',
+ now:'go("tracking") を呼ぶだけ。',
+ real:'そのまま使える。',
+ data:'client-side'},
+{sel:'#view-dashboard table', v:'dashboard', cat:'data', jp:'担当者別パフォーマンス（今四半期）', en:'Performance by rep — this quarter',
+ means:'ユパン / チアキ / ドバイデスク / ロンボクデスクの 予約・商談・成約・売上。JAIのデモから引き継がれた実在のExceedスタッフ名。',
+ now:'4行が直書き。売上は ¥42M / ¥38M / ¥48M / — 。',
+ real:'担当者マスタと紐づけ、期間切替を付ける。人事評価に使われる数字なので、集計定義（受注日基準か契約日基準か）を先に決めないと必ず揉める。',
+ data:'GET /api/metrics/by-owner?period=quarter'},
+{sel:'.bar-line', v:'dashboard', cat:'chart', jp:'流入元別 商談予約（過去リード / SNS流入 / 名刺 / 紹介）',
+ en:'Bookings by source',
+ means:'予約がどこから来たか。過去リード30が最大＝「休眠リストを掘り起こす」という提案の根拠になっている棒。',
+ now:'data-w 属性の固定幅をアニメーションさせるだけ。合計55で、上のKPI「商談予約30」と一致していない。',
+ real:'流入元を最初の接点まで遡って1つに確定させるアトリビューション定義が必要。今は合計が合っていない状態。',
+ data:'GET /api/metrics/by-source'},
+
+/* ───────── LEADS ───────── */
+{sel:'.import-card.featured', v:'leads', cat:'action', jp:'📇 名刺スキャン（AI-OCR）', en:'Business-card scan (AI-OCR)',
+ means:'Teruoさんの名刺を藤原さんへ回し、ドバイ側の名刺も集約する — 7/31の週次会議で決まった動き。その受け皿がこれ。「何千枚規模」と会議で言われている。',
+ now:'openScan() でモーダルを開き、5.6秒かけて読み取りを演出する。実際のOCRは動いていない。',
+ real:'実OCR（Google Vision / Azure）＋日本語縦書き・役職の切り出し。7/10のセッションで、実際の名簿画像でOCRが誤読した既知の弱点がある箇所。',
+ data:'POST /api/ocr/business-card (multipart)'},
+{sel:'.import-grid .import-card:nth-child(2)', v:'leads', cat:'action', jp:'📄 CSV / Excel取込', en:'CSV / Excel import',
+ means:'Excelに散らばった過去リストの一括投入。JAIが「8月に1,000〜3,000件で検証」と言っているのがこの機能。',
+ now:'toast() で「2,140件取込・187件の重複を統合」と表示するだけ。ファイル選択すら出ない。',
+ real:'列マッピングUI、文字コード（Shift_JIS）、重複判定ルール、そして最重要＝同意記録（いつ・どこで取得した個人情報か）。ここが法務上の急所。',
+ data:'POST /api/imports (file) → job'},
+{sel:'.import-grid .import-card:nth-child(3)', v:'leads', cat:'system', jp:'🔗 GoHighLevel連携', en:'GoHighLevel sync',
+ means:'Exceedが既に使っているCRM。JAIは「監査アクセス（読み取り中心）」を今週の依頼事項の②に挙げている。',
+ now:'toast()で「312件を更新しました」と出すだけ。「最終同期 本日 9:20」も直書き。',
+ real:'双方向同期はどちらを正とするかの衝突解決が要る。まず読み取り専用の片方向から始めるのが安全。',
+ data:'GoHighLevel API v2 · Contacts / Opportunities'},
+{sel:'.import-grid .import-card:nth-child(4)', v:'leads', cat:'system', jp:'💬 SNS / LP / Gmail', en:'SNS / landing page / Gmail intake',
+ means:'InstagramのDM、フォーム送信、Gmail問い合わせをリアルタイムで取り込む口。',
+ now:'toast()のみ。',
+ real:'3つ全く別の実装。Instagram=Graph API（審査必要）、LP=自前webhook、Gmail=OAuth個別同期（JAIは「将来オプション・別途見積り」に置いている）。',
+ data:'Meta Graph API · webhook · Gmail API'},
+{sel:'#leadSearch', v:'leads', cat:'input', jp:'氏名・会社名で検索…', en:'Search by name or company',
+ means:'リード一覧の絞り込み。',
+ now:'oninput で renderLeads() を呼び、10件のダミー配列をブラウザ上でフィルタする。',
+ real:'3万件が相手なのでサーバーサイド検索必須。日本語の表記ゆれ（カナ・旧字・法人格の有無）に耐える必要がある。',
+ data:'GET /api/leads?q='},
+{sel:'#segChips .chip', v:'leads', cat:'input', jp:'分類チップ（すべて / ドバイ / ロンボク / 投資 / 移住 / 法人）',
+ en:'Segment filter chips',
+ means:'リードを6つの性質で切り替える。AIが自動分類する想定の「分類」列と対応。',
+ now:'segFilter 変数を書き換えて再描画。単一選択のみ。',
+ real:'複数選択とAND/OR、保存済みビュー（「自分の法人リードだけ」など）。分類自体をAIが付けるならその信頼度も持つ。',
+ data:'GET /api/leads?segment='},
+{sel:'#leadCount', v:'leads', cat:'status', jp:'・30,000件中 N件を表示（サンプル）', en:'Result count',
+ means:'絞り込み結果の件数。',
+ now:'表示中の行数を数えて出すが、母数の「30,000」は文字列として固定。',
+ real:'総数と絞り込み後の件数を両方サーバーから返す。',
+ data:'response.meta.total'},
+{sel:'#leadRows tr', v:'leads', cat:'data', jp:'リード行（クリックで詳細ドロワー）', en:'Lead row — opens detail drawer',
+ means:'1人＝1行。氏名・会社・流入元・分類・スコア・ステータス・次アクション。',
+ now:'onclick="openDrawer(idx)" で右からドロワーが出る。行は10件のみ。',
+ real:'仮想スクロールかページング。行内で担当変更・次回連絡日設定ができると営業の手数が減る。',
+ data:'GET /api/leads/:id'},
+{sel:'#view-leads thead', v:'leads', cat:'data', jp:'一覧の列見出し（リード/流入元/分類/スコア/ステータス/次のアクション）',
+ en:'Table column headers',
+ means:'6列の定義。この6つがリードの最小データモデル。',
+ now:'並べ替えできない。',
+ real:'各列でソート、列の表示切替、CSV書き出し。「次のアクション」は自由入力ではなく定型＋期日にしないと集計できない。',
+ data:'schema: leads'},
+
+/* ───────── KANBAN ───────── */
+{sel:'.kb-col', v:'kanban', cat:'data', jp:'パイプライン列（新規/ナーチャリング中/反応あり/商談予約/商談中/成約）',
+ en:'Pipeline stage column',
+ means:'案件の6段階。左から右へ進む。最右の「成約」だけ色が違う。',
+ now:'kbCols 配列から生成。ドロップ先として ondrop を持つ。',
+ real:'ステージ定義は会社の営業プロセスそのもの。ここを決めないと売上予測もKPIも作れない。変更履歴（いつ誰が動かしたか）を必ず残す。',
+ data:'GET /api/pipeline/stages'},
+{sel:'.kb-card', v:'kanban', cat:'data', jp:'案件カード（ドラッグ可能）', en:'Deal card — draggable',
+ means:'1件の案件。氏名・会社・分類バッジ・スコア。',
+ now:'draggable=true。kbDrop() で col を書き換えて再描画し、トーストを出す。リロードで元通り。',
+ real:'ドロップ時に PATCH。楽観的更新＋失敗時ロールバック。誰かが同時に動かしたときの衝突処理も。',
+ data:'PATCH /api/deals/:id { stage }'},
+
+/* ───────── NURTURE ───────── */
+{sel:'#view-nurture .note-banner', v:'nurture', cat:'status', jp:'編集方針バナー', en:'Editorial policy banner',
+ means:'「ドバイの不動産を買いませんか？」ではなく「ドバイは意外と住みやすい」と思わせる — この製品の思想が一行で書かれている場所。売り込まないから開封される、という前提。',
+ now:'静的テキスト。',
+ real:'文面を書く人（藤原さん想定）が見る編集ガイドとして、実際のトーン&マナー文書へリンクさせる。',
+ data:'static'},
+{sel:'.seq-step', v:'nurture', cat:'data', jp:'ステップメール1通（第1〜7週）', en:'Step-mail step (weeks 1–7)',
+ means:'週1通×7週の連載。左＝週番号、中＝件名と目的とCTA、右＝配信数・開封率・クリック率・配信スイッチ。',
+ now:'seq 配列から生成。数値は全て固定（開封率24.6%→15.4%と自然に減衰する形で作ってある）。',
+ real:'件名のA/Bテスト、送信時刻の最適化、途中で反応した人をシーケンスから自動離脱させる処理（反応後も配信し続けるのが一番嫌われる）。',
+ data:'GET /api/sequences/:id/steps'},
+{sel:'.seq-week', v:'nurture', cat:'status', jp:'第N週ラベル', en:'Week number',
+ means:'配信タイミング。登録日からの相対週。',
+ now:'固定。',
+ real:'絶対日付ではなく登録日起点の相対スケジュール。祝日・深夜を避ける配信窓の設定が要る。',
+ data:'step.offset_days'},
+{sel:'.seq-stats .switch', v:'nurture', cat:'action', jp:'配信ON/OFFスイッチ', en:'Step enable toggle',
+ means:'その週の配信を一時停止するトグル。',
+ now:'onchange で「配信再開/一時停止しました（デモ）」とトーストを出すだけ。状態は保存されない。',
+ real:'即時反映。停止中に登録された人をどう扱うか（スキップか待機か）の仕様が要る。',
+ data:'PATCH /api/steps/:id { active }'},
+
+/* ───────── SNS ───────── */
+{sel:'#view-sns .note-banner', v:'sns', cat:'system', jp:'導線図：SNS投稿 → LP/無料資料 → メール取得 → ステップメール → 相談予約',
+ en:'Funnel path: post → landing page → email capture → step-mail → booking',
+ means:'あなたが追加した部分。SNSからどうやってメールアドレスを取り、ステップメールに流し込むかの5段。ここが繋がらないとSNSは砂に水。',
+ now:'静的なチップの並び。',
+ real:'各段にUTMを付けて実測する。特に「メール取得」の同意チェックは法的に必須。',
+ data:'UTM → /api/leads (source=sns)'},
+{sel:'#view-sns .grid.g-2 > .card', v:'sns', cat:'data', jp:'SNS企画パターンA〜D（各5企画）', en:'Content patterns A–D (5 ideas each)',
+ means:'A=ドバイの思い込みを壊す生活情報 / B=ノマド・経営者向け移住導線 / C=ロンボク視察・開発ストーリー / D=海外不動産の失敗回避。計20企画。すべてあなたが書いたもので、JAIのデモには無い。',
+ now:'静的な表。企画タイトル・冒頭フック・CTAの3列。',
+ real:'撮影依頼と紐づける。Exceed Holdingsのマーケ再編案（8/7ボード提案）にある「撮影リクエストのゲート」がまさにこれで、口頭依頼を禁止してこの表から発注する設計にできる。',
+ data:'GET /api/content-plans?pattern='},
+{sel:'#view-sns .card:last-child table', v:'sns', cat:'data', jp:'リード種別 × 刺さるSNSテーマ × メール件名例 × CTA',
+ en:'Lead type × SNS theme × subject line × CTA mapping',
+ means:'SNSで当たったネタを、どの過去リード層にメール転用するかの対応表。企業リスト / 名刺交換 / 移住・ノマド / 投資家・経営者 の4層。',
+ now:'静的4行。',
+ real:'この表がそのままセグメント別配信ルールになる。ステップメール画面と同じデータを参照させるべき。',
+ data:'join: segments × content'},
+
+/* ───────── TRACKING ───────── */
+{sel:'#hotAlert', v:'tracking', cat:'ai', jp:'高スコアリード検知アラート', en:'High-score lead alert',
+ means:'しきい値40点を超えた瞬間に出る警告。「誰を追うか」を人間の勘から機械の判断に移す、という主張の実体。',
+ now:'森田様スコア92が固定表示。ライブデモ中だけ高田様48に書き換わる。',
+ real:'スコア更新イベントを購読し、閾値超過で発火。同じ人で何度も鳴らないクールダウンが要る（鳴りすぎたアラートは必ず無視されるようになる）。',
+ data:'WS /events → threshold rule'},
+{sel:'#hotAlert .btn-orange', v:'tracking', cat:'action', jp:'営業に通知', en:'Notify sales rep',
+ means:'担当者に手動でプッシュを送るボタン。',
+ now:'toast()で「ユパンに通知を送信しました」と出すだけ。',
+ real:'実通知（プッシュ / LINE / WhatsApp）。JAIの後続開発フェーズにLINE公式アカウント連携が入っているのがここ。',
+ data:'POST /api/notify { userId, leadId }'},
+{sel:'#feedList', v:'tracking', cat:'data', jp:'ライブアクティビティ（自動更新）', en:'Live activity feed',
+ means:'開封・クリック・返信・予約が起きた順に流れる。誰が今動いているかが分かる画面。',
+ now:'5件が固定。ライブデモ実行時のみ addFeed() で先頭に積まれる。',
+ real:'WebSocket。メール配信基盤のwebhookを受けて即時反映。開封トラッキングはApple MPPで水増しされるので、開封のみでスコアを上げすぎない設計が要る。',
+ data:'WS /events  ·  POST /webhooks/email'},
+{sel:'#feedList .feed-item', v:'tracking', cat:'data', jp:'アクティビティ1件', en:'Single activity event',
+ means:'誰が・何をしたか・何点入ったか・現在の合計。',
+ now:'HTML直書き（またはライブデモ生成）。クリック不可。',
+ real:'クリックでその人の詳細ドロワーへ。イベントは生ログとして別テーブルに永続化する。',
+ data:'events table'},
+{sel:'#view-tracking .card:last-child table', v:'tracking', cat:'system', jp:'スコアリングモデル（9項目）', en:'Scoring model — 9 actions',
+ means:'開封+1 / クリック+3 / LP閲覧+3 / 相談ページ閲覧+5 / 返信+10 / 予約完了+20 / ロンボク視察希望+30 / 法人案件+30 / 高予算+30。この9行がシステム全体の優先順位を決めている。',
+ now:'表示のみ。値は変更できない。実際のスコア計算コードは存在せず、各リードの点数は手で書かれている。',
+ real:'管理画面で編集可能にし、変更履歴を残す。「成約率を見ながら毎月調整」と書いてあるので、実際に成約データと突き合わせて重みを見直す運用が前提。減衰（30日触れなければ-10など）も必要。',
+ data:'GET/PUT /api/scoring-rules'},
+{sel:'#view-tracking .funnel-note', v:'tracking', cat:'system', jp:'営業通知のしきい値：スコア40以上', en:'Notification threshold: score ≥ 40',
+ means:'この1つの数字が「営業が何件通知を受けるか」を決める。下げれば取りこぼしが減り、上げれば通知疲れが減る。',
+ now:'文章として書かれているだけ。動作には影響しない。',
+ real:'設定値としてDBに持ち、担当者ごとに上書きできるようにする。',
+ data:'settings.notify_threshold'},
+
+/* ───────── BOOKING ───────── */
+{sel:'.wizard-steps', v:'booking', cat:'status', jp:'予約3ステップ（メールのCTA → 日時を選択 → 予約完了）',
+ en:'Booking wizard — 3 steps',
+ means:'見込み客側の体験。3クリックで予約が終わる設計。ここが長いと落ちる。',
+ now:'setStep() が on/done クラスを付け替えるだけ。',
+ real:'そのままの3段で良い。離脱率を段ごとに計測する。',
+ data:'client-side'},
+{sel:'.email-frame', v:'booking', cat:'data', jp:'配信メールのプレビュー', en:'Sent email preview',
+ means:'見込み客が受け取るメールそのもの。差出人は news@exceed-box.example（ダミードメイン）。',
+ now:'HTMLで再現した見た目のみ。実際に送信されるHTMLメールとは別物。',
+ real:'実際の配信テンプレートと同じHTMLをここでプレビューする。主要メーラー（Gmail/Outlook/iOS）での表示崩れ確認が要る。',
+ data:'GET /api/templates/:id/preview'},
+{sel:'.email-cta', v:'booking', cat:'action', jp:'メール内CTAボタン（ドバイ移住 / 不動産投資 / ロンボク視察 / 30分相談）',
+ en:'In-email CTA buttons — 4 topics',
+ means:'4つの相談テーマ。押されたテーマが、そのまま担当者の自動振り分けキーになる。「売り込みはしません」と添えてあるのが意図的。',
+ now:'pickTopic() を呼び、ステップ2へ進む。',
+ real:'メール内では署名付きURL（誰がどのテーマを押したか特定できる）にする。押した時点でスコア加算とテーマ記録が走る。',
+ data:'GET /public/book?topic=&token='},
+{sel:'#slotGrid', v:'booking', cat:'input', jp:'空き枠カレンダー（月〜金 × 4枠）', en:'Available slot grid — Mon–Fri × 4 slots',
+ means:'選べる30分枠。埋まっている枠は押せない。裏の担当者割り当ては客には見せない、と注記がある。',
+ now:'days と slotTimes の固定配列。takenSlots に7枠が直書きで埋まっている。',
+ real:'Google Calendarの FreeBusy をリアルタイム取得。日本時間とドバイ時間の4時間差、営業時間の定義、当日予約の可否がすべて仕様として要る。',
+ data:'Google Calendar FreeBusy API'},
+{sel:'#slotGrid .slot:not(.taken)', v:'booking', cat:'action', jp:'予約枠ボタン（空き）', en:'Available 30-min slot',
+ means:'客が押せる枠。押した瞬間に担当者が確定し、カレンダーが押さえられる。',
+ now:'pickSlot() が .picked を付け、0.35秒後にステップ3へ進む。',
+ real:'押した瞬間に仮押さえ（hold）を掛けないと、同じ枠を2人が同時に取る。確定は決済不要なので競合が起きやすい。',
+ data:'POST /public/holds → POST /public/bookings'},
+{sel:'#slotGrid .slot.taken', v:'booking', cat:'status', jp:'予約枠（埋まり・押せない）', en:'Taken slot — disabled',
+ means:'既に予定が入っている枠。灰色で無効化されている。',
+ now:'takenSlots に 7つのキーが直書きされているだけ。',
+ real:'Google Calendar の FreeBusy から算出。個人予定も「埋まり」として出すが、内容は客に見せない。',
+ data:'Google Calendar FreeBusy'},
+{sel:'#topicLabel', v:'booking', cat:'status', jp:'選択テーマの表示', en:'Selected topic label',
+ means:'客が押したCTAのテーマ。これが担当者振り分けのキーになる。',
+ now:'pickTopic() が文字列を入れるだけ。',
+ real:'テーマIDとして保持し、予約レコードに保存。後で「どのテーマが最も成約したか」の分析軸になる。',
+ data:'booking.topic_id'},
+{sel:'.wc-event', v:'assign', cat:'data', jp:'カレンダー予定ブロック', en:'Calendar event block',
+ means:'担当者の予定。色で種別を分けている（青=社内、橙=ロンボク、緑=ドバイ、★=新規予約）。',
+ now:'baseEvents の5件が固定。★は予約デモを通したときだけ1件出る。',
+ real:'Google Calendar から取得。個人予定はタイトルを隠して「予定あり」とだけ表示する。',
+ data:'Google Calendar events.list'},
+{sel:'#bkStep3 .assign-card', v:'booking', cat:'system', jp:'自動アサイン結果（担当者カード）', en:'Auto-assignment result',
+ means:'選んだテーマから決まった担当者が客側にも表示される。',
+ now:'owners オブジェクトの固定マッピングから引く。',
+ real:'空き状況と負荷分散を見て決める。担当者の顔写真とプロフィールを出すと当日キャンセルが減る。',
+ data:'POST /public/bookings → assignment'},
+{sel:'#bkStep3 .pipeline-flow', v:'booking', cat:'system', jp:'予約完了時に自動で走る4処理', en:'4 automations fired on booking',
+ means:'カレンダー登録 / 担当者へプッシュ / スコア+20とステータス更新 / 客へ確認メールと前日リマインド。この4つが同時に走るのがこの製品の価値。',
+ now:'文字として並んでいるだけ。実際に走るのは画面上の見た目の変更のみ。',
+ real:'4つとも別サービス。1つ失敗したときのリトライとロールバック（カレンダーは入ったがメールが出ていない状態）の設計が必須。',
+ data:'job queue: booking.created'},
+{sel:'#bkStep3 .btn-primary', v:'booking', cat:'action', jp:'営業カレンダーで確認する →', en:'View in sales calendar →',
+ means:'今入れた予約が担当者側でどう見えるかへ移動。',
+ now:'go("assign")。',
+ real:'そのまま。',
+ data:'client-side'},
+{sel:'#bkStep3 .btn-ghost', v:'booking', cat:'action', jp:'デモをやり直す', en:'Reset demo',
+ means:'予約フローを最初に戻す。',
+ now:'resetBooking()。',
+ real:'本番では不要。',
+ data:'client-side'},
+
+/* ───────── ASSIGN ───────── */
+{sel:'.rule-row', v:'assign', cat:'system', jp:'振り分けルール（テーマ → 担当者）', en:'Assignment rule (topic → owner)',
+ means:'30分相談→ユパン / ドバイ移住→チアキ / 不動産投資→ドバイデスク / ロンボク視察→ロンボクデスク。4本。',
+ now:'HTMLに直書き。「管理者が編集可能」と書いてあるが編集UIは無い。',
+ real:'ルールをDB化し管理画面で編集。テーマ以外の条件（言語・金額・法人個人）も足せる構造にしておく。',
+ data:'GET/PUT /api/assignment-rules'},
+{sel:'#view-assign .funnel-note', v:'assign', cat:'system', jp:'フォールバック：5営業日以内に空きが無ければ次の担当へ自動オーバーフロー',
+ en:'Fallback: overflow to next rep if no slot within 5 business days',
+ means:'担当者が埋まっているせいで予約を逃さないための逃がし弁。',
+ now:'注記のみ。ロジックは無い。',
+ real:'実装必須。これが無いと繁忙期に予約が取れず、施策全体の数字が落ちる。',
+ data:'assignment.fallback_days'},
+{sel:'#weekCal', v:'assign', cat:'data', jp:'週カレンダー（担当者別）', en:'Weekly calendar per rep',
+ means:'担当者の1週間。既存予定と、新しく入った予約（★印）が見える。',
+ now:'baseEvents の5件が固定。予約デモを通すと newEvent が1件だけ足される。',
+ real:'Google Calendar双方向同期。個人予定はタイトルを隠して「予定あり」とだけ出す（プライバシー）。',
+ data:'Google Calendar API events.list'},
+{sel:'#newBookingBadge', v:'assign', cat:'status', jp:'新規予約 1件', en:'New booking badge',
+ means:'まだ見ていない新規予約の印。',
+ now:'予約デモ完了時に display:inline-block になるだけ。',
+ real:'既読管理と紐づける。',
+ data:'bookings.unread'},
+
+/* ───────── TODAY (MOBILE) ───────── */
+{sel:'.phone', v:'today', cat:'system', jp:'営業スマホ画面（モック）', en:'Sales rep mobile screen (mock)',
+ means:'現場の営業はPCを開かない、という前提の画面。「GoHighLevelは現場には難しい」という課題への回答だと明記されている。Salesforceが定着しなかった理由と同じ問題への解答。',
+ now:'HTMLで作ったスマホ枠。実際のアプリではない。',
+ real:'PWAかネイティブ。プッシュ通知が要るならネイティブかWeb Push。オフラインでも見えることが現場では効く。',
+ data:'—'},
+{sel:'#phonePush', v:'today', cat:'ai', jp:'プッシュ通知（🔥 高スコアリード検知）', en:'Push notification banner',
+ means:'スコアが跳ねた瞬間に営業のスマホに出る通知。反応から接触までの時間を縮めるのが目的。',
+ now:'showPush() で5.2秒間だけ表示。',
+ real:'Web Push / APNs。通知の頻度制御を最初から入れる。1日20件鳴ったら誰も見なくなる。',
+ data:'push service'},
+{sel:'.p-card', v:'today', cat:'data', jp:'本日のタスクカード（5件）', en:'Today’s task card',
+ means:'来店対応 / ロンボク視察 / AI返信 / 未返信フォロー / 見積フォロー。時刻・種別バッジ・相手・文脈・ボタン1つ。',
+ now:'5枚が直書き。pDone() で「完了 ✓」に変わりカードが薄くなる。リロードで戻る。',
+ real:'タスクの生成ルール（誰がいつ何を根拠に作るか）がこの画面の本体。手動追加も要る。',
+ data:'GET /api/tasks?owner=me&date=today'},
+{sel:'.p-card .p-btn', v:'today', cat:'action', jp:'タスク実行ボタン（来店対応する / 視察を案内する / AI返信案で返信 など）',
+ en:'Task action button',
+ means:'営業の入力を1タップに減らすための仕組み。データ入力ではなく行動報告だけをさせる。',
+ now:'pDone() でボタンを無効化しトーストを出す。',
+ real:'実際の副作用（記録保存・メール送信・次回日設定）に接続。オフライン時のキュー再送も。',
+ data:'POST /api/tasks/:id/complete'},
+{sel:'#view-today .p-card:last-child .p-btn.ghost:last-child', v:'today', cat:'ai', jp:'🎤 音声メモを残す',
+ en:'Leave a voice memo',
+ means:'あなたが追加した機能。JAIのデモには無い。営業が入力を嫌がる問題への現実的な回答で、喋ればそれが履歴になる。',
+ now:'toast()で「文字起こしして高橋様の履歴に登録しました（デモ）」と出すだけ。',
+ real:'録音→Whisper等で文字起こし→要約→該当リードの履歴に追記。日本語の固有名詞（人名・物件名）の誤変換対策が要る。',
+ data:'POST /api/notes/voice (audio) → transcript'},
+{sel:'#view-today .card:first-of-type .pipeline-flow', v:'today', cat:'system', jp:'このスマホ画面のポイント（5項目）',
+ en:'Design principles of the mobile screen',
+ means:'本日分だけ見せる / 入力は最小 / 高スコアは即通知 / 返信はAIが下書き / 手入力は3つだけ（成約失注見込み・次回連絡日・音声メモ）。最後の1行が実装スコープを事実上決めている。',
+ now:'静的リスト。',
+ real:'この5項目を仕様の受け入れ条件にする。特に「手入力は3つだけ」を守れるかが定着の分かれ目。',
+ data:'static'},
+{sel:'#view-today .card:last-of-type .btn-primary', v:'today', cat:'action', jp:'🔔 通知をテスト表示',
+ en:'Test push notification',
+ means:'デモ用に通知を手動で出すボタン。',
+ now:'showPush()。',
+ real:'管理者が実端末へテスト通知を送る機能として残すと運用で使える。',
+ data:'POST /api/notify/test'},
+
+/* ───────── ARCH ───────── */
+{sel:'#view-arch > div[style*="max-width:760px"] > div:nth-child(1)', v:'arch', cat:'system',
+ jp:'第1層：Exceed Box ダッシュボード（日常の操作画面）', en:'Layer 1 — Exceed Box dashboard',
+ means:'社員が毎日触る唯一の画面。CRMを直接触らせない、という設計思想。',
+ now:'図の1ブロック。',
+ real:'今このHTMLがあるのがまさにこの層。残り2層が未着手。',
+ data:'this app'},
+{sel:'#view-arch > div[style*="max-width:760px"] > div:nth-child(3)', v:'arch', cat:'system',
+ jp:'第2層：自社開発バックエンド（AI分類 / スコアリング / 通知 / データ連携）', en:'Layer 2 — custom backend',
+ means:'この製品の本体。画面ではなくここに価値がある。今この層は完全に存在しない。',
+ now:'図の1ブロック。実体ゼロ。',
+ real:'JAIの提案はここをNode.js + PostgreSQLで約48人日と見積もっている。作るならこの層が最初。',
+ data:'Node.js API + PostgreSQL'},
+{sel:'#view-arch > div[style*="max-width:760px"] > div:nth-child(5)', v:'arch', cat:'system',
+ jp:'第3層：既存ツール連携（GoHighLevel / HubSpot / Gmail / Google Calendar / WhatsApp / Drive）',
+ en:'Layer 3 — existing tool integrations',
+ means:'既に社内にあるものを捨てずに裏側で使う。GoHighLevelは現役、HubSpotは移行先候補として並記されている。',
+ now:'チップが並んでいるだけ。',
+ real:'6つ全て別実装・別認証・別レート制限。全部やる必要はなく、GoHighLevelとGoogle Calendarの2つが先。',
+ data:'6 external APIs'},
+{sel:'#view-arch .grid.g-2 .card:first-child .pipeline-flow', v:'arch', cat:'system', jp:'連携方針（4項目）',
+ en:'Integration policy — 4 points',
+ means:'GHLがAPI連携できるなら活かす / 難しければHubSpot移行も検討 / どちらでも日常画面はExceed Boxに統一 / CRMは裏のデータ基盤。',
+ now:'静的。',
+ real:'この判断は「GoHighLevel監査」を先にやらないと決まらない。JAIも今週の依頼②で読み取りアクセスを求めている。',
+ data:'decision pending'},
+{sel:'#view-arch .grid.g-2 .card:last-child .pipeline-flow', v:'arch', cat:'system', jp:'自動でつなぐプロセス（7段）',
+ en:'End-to-end automated process — 7 steps',
+ means:'集約 → AI分類 → 配信 → 反応検知 → 予約 → 通知 → 経営ダッシュボード。この7段がそのまま実装のロードマップになっている。',
+ now:'静的リスト。',
+ real:'7段を7つのマイルストーンとして切ると進捗が見える。1と5と6が最小構成。',
+ data:'roadmap'},
+
+/* ───────── OVERLAYS ───────── */
+{sel:'#scanOverlay .biz-card', v:'modal', cat:'data', jp:'名刺サンプル（株式会社サンライズ商事 / 中村 翔太）',
+ en:'Sample business card',
+ means:'スキャン対象のダミー名刺。走査線が上から下へ流れる演出付き。',
+ now:'CSSで描いた名刺。画像ですらない。',
+ real:'実際に撮影した画像を表示。傾き補正・トリミング・複数枚一括が要る。',
+ data:'uploaded image'},
+{sel:'.ocr-fields', v:'modal', cat:'ai', jp:'OCR抽出フィールド（氏名 / 会社名・役職 / メール / 電話番号）',
+ en:'OCR extracted fields',
+ means:'名刺から機械が読み取った4項目。ここが名刺スキャンの成果物。',
+ now:'1.4秒後から0.45秒間隔で固定文字列を流し込む演出。OCRは動いていない。',
+ real:'抽出後に人が直せる編集UIが必須。7/10のセッションで実画像のOCRが誤読した件があり、信頼度が低いフィールドは色を変えて確認を促す設計が要る。',
+ data:'POST /api/ocr → fields + confidence'},
+{sel:'.scan-steps', v:'modal', cat:'system', jp:'処理4ステップ（OCR読み取り → 重複チェック → Exceed Box登録 → ステップメール分類）',
+ en:'4-step scan pipeline',
+ means:'撮ってから配信対象になるまでの流れ。③がJAI版では「OneBox登録」だった箇所。',
+ now:'setTimeoutで3.3秒→4.1秒→4.9秒→5.6秒に順次点灯するだけ。',
+ real:'②の重複チェックが一番重要。同じ人が名刺・CSV・GHLから3回入るのが現実で、名寄せに失敗すると同じ人に3通届く。',
+ data:'dedupe by email/phone/company+name'},
+{sel:'#scanBtn', v:'modal', cat:'action', jp:'▶ スキャン開始', en:'Start scan',
+ means:'OCR処理の起動。',
+ now:'runScan() が5.6秒の演出を再生する。',
+ real:'アップロード→非同期ジョブ→完了通知。複数枚なら進捗バー。',
+ data:'POST /api/ocr/business-card'},
+{sel:'#scanCloseBtn', v:'modal', cat:'action', jp:'リード一覧で確認 →', en:'View in lead list →',
+ means:'登録された新規リードを一覧で見に行く。',
+ now:'finishScan() が leads 配列の先頭に「中村 翔太」を足し、リード管理画面へ遷移して1行目をハイライトする。この画面で唯一、状態が本当に変わる操作。',
+ real:'そのままの導線でよい。',
+ data:'client-side state'},
+{sel:'#aiOverlay .ai-mail', v:'modal', cat:'ai', jp:'AI生成の返信文面', en:'AI-generated reply draft',
+ means:'相手の履歴・スコア・閲覧内容からAIが書いた返信案。営業は確認して送るだけ、という前提。',
+ now:'typeText() が14ms/文字でタイプ演出する。文面は3人分がハードコードされていて、該当しない相手は長谷川様の文面が出る。',
+ real:'LLM API。日本語の敬語・宛名・署名をテンプレで固定し、本文だけ生成させるのが事故が少ない。生成ログの保存は必須。',
+ data:'POST /api/ai/draft-reply'},
+{sel:'#aiSendBtn', v:'modal', cat:'action', jp:'承認して送信', en:'Approve & send',
+ means:'人間が承認して初めて送る、という関門。タイプ演出が終わるまで押せない。',
+ now:'toast()を出してモーダルを閉じるだけ。何も送信されない。',
+ real:'ここが一番危険な箇所。誤送信は取り消せない。送信前プレビュー・宛先確認・取り消し猶予（30秒）を必ず入れる。',
+ data:'POST /api/messages/send'},
+{sel:'#aiOverlay .btn-ghost', v:'modal', cat:'action', jp:'✏️ 編集する', en:'Edit draft',
+ means:'AIの文面を人が直す導線。',
+ now:'toast()で「編集モード（デモ）」と出すだけ。編集できない。',
+ real:'その場で編集可能に。編集された箇所を学習に回すとAIの質が上がる。',
+ data:'PATCH /api/drafts/:id'},
+{sel:'#drawer .drawer-head', v:'modal', cat:'data', jp:'リード詳細ヘッダー（氏名 / 会社 / スコア / バッジ）',
+ en:'Lead detail drawer header',
+ means:'1人のリードの要約。右からスライドして出る。',
+ now:'openDrawer(idx) が leads 配列から描画。',
+ real:'編集可能に。担当変更・タグ付け・電話発信ボタンを置く場所。',
+ data:'GET /api/leads/:id'},
+{sel:'#drBody', v:'modal', cat:'data', jp:'タッチポイント履歴 / スコア推移 / 名刺画像 / AIおすすめアクション',
+ en:'Touchpoint timeline, score trend, card image, AI recommendation',
+ means:'その人と会社の全接触履歴。名刺交換から今日の予約ページ閲覧まで1本の時系列。営業が電話前に30秒で読む場所。',
+ now:'timelines に森田様と西田様の2人分だけ詳細が用意され、他8人は defaultTimeline() の2行で済まされる。スコア推移のスパークラインは全員同じ形。',
+ real:'イベントログから自動生成。メール・通話・WhatsApp・来店をすべて同じ時系列に混ぜられるかが価値の分かれ目。',
+ data:'GET /api/leads/:id/events'},
+{sel:'#drBody .ai-box', v:'modal', cat:'ai', jp:'✨ AIおすすめアクション', en:'AI recommended next action',
+ means:'スコアに応じて「本日中の電話」「予約リンク送付」「育成継続」の3つを出し分ける。',
+ now:'score>=70 / >=40 / それ未満の単純なif分岐。AIではない。',
+ real:'実際のLLMかルールエンジン。どちらでもよいが、なぜその提案なのかの根拠を1行添えないと営業は従わない。',
+ data:'POST /api/ai/next-action'},
+];
+
+/* ───────── engine ───────── */
+let xmOn=false, xmSel=null, xmFilter=null, xmItems=[];
+
+function xmBuild(){
+  document.querySelectorAll('.xm-tag').forEach(e=>{
+    e.classList.remove('xm-tag','xm-sel','xm-on','xm-nobadge');
+    e.removeAttribute('data-xm-n'); e.removeAttribute('data-xm-i');
+    e.style.removeProperty('--xc'); e.style.removeProperty('--xcbg'); e.removeAttribute('title');
+  });
+  xmItems=[]; let n=0;
+  XR.forEach(r=>{
+    let els;
+    try{ els=document.querySelectorAll(r.sel); }catch(e){ return; }
+    els.forEach(el=>{
+      if(el.closest('.xm-panel')) return;
+      if(el.classList.contains('xm-tag')) return;   // first registry entry wins
+      n++;
+      const cat=XCAT[r.cat], i=xmItems.length;
+      el.classList.add('xm-tag');
+      el.dataset.xmN=n; el.dataset.xmI=i;
+      el.style.setProperty('--xc',cat.c);
+      el.style.setProperty('--xcbg',cat.c+'1A');
+      el.title=r.en;
+      const cs=getComputedStyle(el);
+      if(/^(TR|TD|TH|TBODY|THEAD|TABLE)$/.test(el.tagName)) el.classList.add('xm-nobadge');
+      else if(cs.position==='static') el.style.position='relative';
+      xmItems.push({...r,el,n});
+    });
+  });
+  xmLegendRender();
+}
+
+function xmLegendRender(){
+  const counts={};
+  xmItems.forEach(it=>counts[it.cat]=(counts[it.cat]||0)+1);
+  document.getElementById('xmLegend').innerHTML=Object.entries(XCAT).map(([k,c])=>
+    `<button class="xm-lg${xmFilter&&xmFilter!==k?' off':''}" onclick="xmSetFilter('${k}')">
+       <i style="background:${c.c}"></i>${c.jp}<b>${counts[k]||0}</b></button>`).join('');
+}
+function xmSetFilter(k){
+  xmFilter = xmFilter===k ? null : k;
+  document.body.classList.toggle('xm-dim',!!xmFilter);
+  xmItems.forEach(it=>it.el.classList.toggle('xm-on',!xmFilter||it.cat===xmFilter));
+  xmLegendRender();
+  if(!xmSel) xmIndex();
+}
+
+function xmShow(i){
+  const it=xmItems[i]; if(!it) return;
+  xmSel=i;
+  xmItems.forEach(x=>x.el.classList.remove('xm-sel'));
+  it.el.classList.add('xm-sel');
+  it.el.scrollIntoView({block:'center',behavior:'smooth'});
+  const c=XCAT[it.cat];
+  document.getElementById('xmBody').innerHTML=`
+    <div class="xm-crumb">${XVIEW[it.v]} · 要素 #${it.n}</div>
+    <div class="xm-cat" style="background:${c.c}">${c.jp} / ${c.en}</div>
+    <div class="xm-jp">${it.jp}</div>
+    <div class="xm-en">${it.en}</div>
+    <div class="xm-f"><h4>意味 <span>What it means</span></h4><p>${it.means}</p></div>
+    <div class="xm-f"><h4>今の挙動 <span>What it does today</span></h4><p>${it.now}</p></div>
+    <div class="xm-f build"><h4>実装に必要なもの <span>To make it real</span></h4><p>${it.real}</p></div>
+    <div class="xm-f data"><h4>データ源 <span>Data source</span></h4><p>${it.data}</p></div>
+    <div class="xm-nav">
+      <button onclick="xmShow(${(i-1+xmItems.length)%xmItems.length})">← 前</button>
+      <button class="k" onclick="xmIndex()">一覧に戻る</button>
+      <button onclick="xmShow(${(i+1)%xmItems.length})">次 →</button>
+    </div>`;
+  document.getElementById('xmBody').scrollTop=0;
+}
+
+function xmIndex(){
+  xmSel=null;
+  xmItems.forEach(x=>x.el.classList.remove('xm-sel'));
+  const groups={};
+  xmItems.forEach((it,i)=>{ if(xmFilter&&it.cat!==xmFilter) return; (groups[it.v]=groups[it.v]||[]).push([it,i]); });
+  let html=`<div class="xm-empty">
+      <b>${xmItems.length}個の要素</b>に注釈が付いています。画面上の色付き枠をクリックすると、その要素の日本語表記・英訳・意味・現在の挙動・実装に必要なものが出ます。
+      <div class="xm-steps">
+        <div><span>1</span>左のナビは解説モード中も移動できます（他の画面も見られます）</div>
+        <div><span>2</span>上の色チップで種類ごとに絞り込めます</div>
+        <div><span>3</span>モーダル・ドロワーは上の「📇 ✨ ◉」ボタンで開いて調べます</div>
+        <div><span>4</span>解説モード中、通常のクリック動作は止めてあります</div>
+      </div></div>`;
+  Object.keys(XVIEW).forEach(v=>{
+    if(!groups[v]) return;
+    html+=`<div class="xm-ix"><h5>${XVIEW[v]}</h5>`;
+    groups[v].forEach(([it,i])=>{
+      html+=`<button onclick="xmShow(${i})"><b>${it.n}</b><i style="background:${XCAT[it.cat].c}"></i>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${it.jp}</span>
+        <u>${XCAT[it.cat].en}</u></button>`;
+    });
+    html+='</div>';
+  });
+  document.getElementById('xmBody').innerHTML=html;
+  document.getElementById('xmBody').scrollTop=0;
+}
+
+function xmOverlay(which){
+  if(which==='close'){
+    document.getElementById('scanOverlay').classList.remove('show');
+    document.getElementById('aiOverlay').classList.remove('show');
+    document.getElementById('drawer').classList.remove('open');
+  }else if(which==='scan'){
+    document.getElementById('scanOverlay').classList.add('show');
+    ['ocr1','ocr2','ocr3','ocr4'].forEach((id,i)=>{
+      const e=document.getElementById(id);
+      e.textContent=['中村 翔太','株式会社サンライズ商事・事業開発部 部長','s.nakamura@sunrise-t.example','03-1234-5678'][i];
+      e.classList.add('filled');
+    });
+  }else if(which==='ai'){
+    document.getElementById('aiOverlay').classList.add('show');
+    document.getElementById('aiMeta').textContent='宛先：森田 賢二 様（青山商事株式会社）・文脈：法人移転・スコア92';
+    document.getElementById('aiMailBody').innerHTML=(aiMails['森田 賢二'].body).replace(/\n/g,'<br>');
+    document.getElementById('aiSendBtn').disabled=false;
+  }else if(which==='drawer'){
+    openDrawer(0);
+  }
+  setTimeout(()=>{ if(xmOn){ xmBuild(); if(xmSel===null) xmIndex(); } },60);
+}
+
+/* force the booking wizard to a given step so hidden steps can be inspected */
+function xmBooking(n){
+  go('booking');
+  if(n===1){ resetBooking(); }
+  else{
+    pickTopic('ロンボク視察の相談');
+    if(n===3){
+      document.getElementById('bkStep2').style.display='none';
+      document.getElementById('bkStep3').style.display='block';
+      document.getElementById('confirmLine').textContent='ロンボク視察の相談・木 7/9 14:00（日本時間）・オンライン（URLはメールでお送りします）';
+      document.getElementById('assignName').textContent='ロンボクデスク';
+      document.getElementById('assignRole').textContent='視察・開発案件';
+      document.getElementById('assignAvatar').textContent='ロ';
+      setStep(3);
+    }
+  }
+  setTimeout(()=>{ if(xmOn){ xmBuild(); if(xmSel===null) xmIndex(); } },80);
+}
+
+/* click capture — block real behaviour, open explanation instead */
+['click','mousedown','mouseup','change','input','submit','dragstart','keydown'].forEach(ev=>{
+  document.addEventListener(ev,function(e){
+    if(!xmOn) return;
+    if(ev==='keydown'&&e.key==='Escape') return;
+    if(e.target.closest('.xm-panel')||e.target.closest('#xmBtn')) return;
+    // let the sidebar still navigate, but explain it too
+    const nav=e.target.closest('.nav-item');
+    if(nav){
+      if(ev==='click'){
+        go(nav.dataset.view);
+        setTimeout(()=>{ xmBuild(); const t=xmItems.findIndex(x=>x.el===nav); if(t>=0)xmShow(t); },80);
+      }
+      e.preventDefault(); e.stopPropagation(); return;
+    }
+    e.preventDefault(); e.stopPropagation();
+    if(ev!=='click') return;
+    const tag=e.target.closest('.xm-tag');
+    if(!tag) return;
+    xmShow(+tag.dataset.xmI);
+  },true);
+});
+
+function xmToggle(force){
+  xmOn = force===undefined ? !xmOn : force;
+  document.body.classList.toggle('xm',xmOn);
+  const b=document.getElementById('xmBtn');
+  b.classList.toggle('on',xmOn);
+  b.innerHTML = xmOn ? '✕ 解説モードを終了' : '❓ 解説モード / Explain';
+  if(xmOn){ xmBuild(); xmIndex(); }
+  else{
+    xmFilter=null; xmSel=null;
+    document.body.classList.remove('xm-dim');
+    document.querySelectorAll('.xm-tag').forEach(e=>{
+      e.classList.remove('xm-tag','xm-sel','xm-on','xm-nobadge');
+      e.removeAttribute('data-xm-n'); e.removeAttribute('data-xm-i'); e.removeAttribute('title');
+    });
+  }
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&xmOn&&!e.defaultPrevented) xmToggle(false); });
+</script>
+
 </body>
 </html>
